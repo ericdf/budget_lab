@@ -1,0 +1,44 @@
+[
+  {
+    "id": "keep_everything",
+    "name": "Keep Everything Running",
+    "description": "Raise revenue rather than cut services. Asks residents to pay more.",
+    "default_levers": ["sales_tax", "parcel_tax", "fee_increases", "vacancy_freeze"]
+  },
+  {
+    "id": "protect_core",
+    "name": "Protect Core Services",
+    "description": "Preserve public safety and essential services. Cut discretionary programs.",
+    "default_levers": ["targeted_reductions", "vacancy_freeze", "fee_increases", "program_elimination"]
+  },
+  {
+    "id": "efficiency_first",
+    "name": "Efficiency First",
+    "description": "Make city government leaner through staffing discipline and outsourcing.",
+    "default_levers": ["vacancy_freeze", "outsourcing", "compensation_restraint", "across_the_board"]
+  },
+  {
+    "id": "structural_reform",
+    "name": "Structural Reform",
+    "description": "Redesign how services are delivered. Slower but more sustainable.",
+    "default_levers": ["outsourcing", "shift_to_county", "service_level_reduction", "compensation_restraint"]
+  },
+  {
+    "id": "spend_less",
+    "name": "Spend Less Overall",
+    "description": "Broad and deep spending cuts. Services will be reduced.",
+    "default_levers": ["program_elimination", "across_the_board", "vacancy_freeze", "service_level_reduction"]
+  },
+  {
+    "id": "use_savings",
+    "name": "Use Savings to Get Through",
+    "description": "Bridge the gap with reserves and deferrals. Buys time but doesn't fix anything.",
+    "default_levers": ["section_115", "capital_deferral", "fund_balance"]
+  },
+  {
+    "id": "balanced",
+    "name": "Balanced Approach",
+    "description": "Small tax increase, targeted cuts, and one structural change. Share the pain.",
+    "default_levers": ["sales_tax", "targeted_reductions", "service_level_reduction", "vacancy_freeze"]
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "total_budget": 820000000,
+  "deficit": 124000000,
+  "categories": [
+    {
+      "id": "public_safety",
+      "name": "Public Safety",
+      "amount": 287000000,
+      "description": "Police, fire, and emergency services — the largest share of the general fund"
+    },
+    {
+      "id": "public_works",
+      "name": "Public Works",
+      "amount": 98000000,
+      "description": "Streets, sidewalks, infrastructure maintenance, and sanitation"
+    },
+    {
+      "id": "parks_rec",
+      "name": "Parks & Recreation",
+      "amount": 66000000,
+      "description": "Parks, recreation centers, aquatics, and youth programs"
+    },
+    {
+      "id": "community_services",
+      "name": "Community Services",
+      "amount": 73000000,
+      "description": "Housing, social services, community programs, and libraries"
+    },
+    {
+      "id": "health",
+      "name": "Health & Human Services",
+      "amount": 74000000,
+      "description": "Public health, mental health, and human services programs"
+    },
+    {
+      "id": "administration",
+      "name": "Administration",
+      "amount": 82000000,
+      "description": "City management, finance, HR, IT, and administrative support"
+    },
+    {
+      "id": "pensions_debt",
+      "name": "Pensions & Debt",
+      "amount": 99000000,
+      "description": "CalPERS pension contributions and debt service on bonds — mostly fixed obligations"
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "amount": 41000000,
+      "description": "Miscellaneous city services, grants, and special programs"
+    }
+  ]
+}
