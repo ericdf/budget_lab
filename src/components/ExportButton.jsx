@@ -14,7 +14,7 @@ const TYPE_LABELS = {
 
 const PRESSURE_LABELS = { low: 'Low', medium: 'Medium', high: 'High' }
 
-export default function ExportButton({ captureRef }) {
+export default function ExportButton() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(null) // 'pdf' | 'png' | null
 
@@ -238,12 +238,13 @@ export default function ExportButton({ captureRef }) {
 
   // ── PNG ──────────────────────────────────────────────────────────────
   async function exportPNG() {
-    if (!captureRef?.current) return
+    const target = document.getElementById('impact-panel-capture')
+    if (!target) return
     setBusy('png')
     setOpen(false)
     try {
       const { toPng } = await import('html-to-image')
-      const dataUrl = await toPng(captureRef.current, {
+      const dataUrl = await toPng(target, {
         backgroundColor: '#f3f4f6',
         pixelRatio: 2,
         style: { borderRadius: '12px', padding: '12px' },
@@ -262,7 +263,7 @@ export default function ExportButton({ captureRef }) {
       <button
         onClick={() => setOpen((o) => !o)}
         disabled={!!busy || selectedLevers.length === 0}
-        className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-400 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+        className="text-xs text-white/70 hover:text-white border border-white/30 hover:border-white/60 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
       >
         {busy ? (
           <span className="animate-pulse">Exporting…</span>

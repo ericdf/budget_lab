@@ -2,6 +2,7 @@ import React from 'react'
 import useStore from '../store/useStore'
 import budget from '../data/budget.json'
 import { formatMoney } from '../utils/calculations'
+import ExportButton from './ExportButton'
 
 export default function TopBar() {
   const { advancedMode, toggleAdvancedMode, clearAll, scenario } = useStore()
@@ -29,19 +30,24 @@ export default function TopBar() {
             Explore how decisions about spending, taxes, and services could shape Berkeley's budget
           </p>
         </div>
-        {/* Advanced mode toggle */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-white/70 hidden sm:block">Simple</span>
-          <button
-            role="switch"
-            aria-checked={advancedMode}
-            onClick={toggleAdvancedMode}
-            className={`toggle-switch ${advancedMode ? 'bg-berkeley-gold' : 'bg-white/30'} focus:ring-white`}
-            aria-label="Toggle advanced mode"
-          >
-            <span className={`toggle-thumb ${advancedMode ? 'translate-x-4' : 'translate-x-0'}`} />
-          </button>
-          <span className="text-xs text-white/70 hidden sm:block">Advanced</span>
+        {/* Controls */}
+        <div className="flex items-center gap-4">
+          {/* Advanced mode toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/70 hidden sm:block">Simple</span>
+            <button
+              role="switch"
+              aria-checked={advancedMode}
+              onClick={toggleAdvancedMode}
+              className={`toggle-switch ${advancedMode ? 'bg-berkeley-gold' : 'bg-white/30'} focus:ring-white`}
+              aria-label="Toggle advanced mode"
+            >
+              <span className={`toggle-thumb ${advancedMode ? 'translate-x-4' : 'translate-x-0'}`} />
+            </button>
+            <span className="text-xs text-white/70 hidden sm:block">Advanced</span>
+          </div>
+          {/* Export */}
+          <ExportButton />
         </div>
       </div>
 

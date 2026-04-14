@@ -1,15 +1,13 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import useStore from '../store/useStore'
 import budget from '../data/budget.json'
 import { formatMoney, CATEGORY_LABELS } from '../utils/calculations'
 import SummaryText from './SummaryText'
-import ExportButton from './ExportButton'
 
 const INFRA_BACKLOG = budget.infrastructure_backlog ?? 1650000000
 const BOND_AMOUNT = 300000000
 
 export default function ImpactPanel() {
-  const captureRef = useRef(null)
   const { scenario, protectedCategories, toggleProtect, selectedLevers } = useStore()
   const {
     gap_closed_pct,
@@ -43,15 +41,12 @@ export default function ImpactPanel() {
 
   return (
     <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
-      <div ref={captureRef} className="space-y-3 sticky top-[108px]">
+      <div id="impact-panel-capture" className="space-y-3 sticky top-[108px]">
         {/* Gap meter */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-              Gap Status
-            </h2>
-            <ExportButton captureRef={captureRef} />
-          </div>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+            Gap Status
+          </h2>
           <div className="text-center mb-3">
             <p className={`text-3xl font-bold ${overClosed ? 'text-green-600' : 'text-berkeley-blue'}`}>
               {overClosed ? '100%+' : `${Math.round(pct)}%`}
