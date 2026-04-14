@@ -5,7 +5,7 @@ import { formatMoney, CATEGORY_LABELS } from '../utils/calculations'
 import SummaryText from './SummaryText'
 
 export default function ImpactPanel() {
-  const { scenario } = useStore()
+  const { scenario, protectedCategories, toggleProtect } = useStore()
   const {
     gap_closed_pct,
     impact_min_total,
@@ -97,6 +97,43 @@ export default function ImpactPanel() {
             </div>
           )}
         </div>
+
+        {/* Values Alignment */}
+        {protectedCategories.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+              Values Alignment
+            </h2>
+            <div className="space-y-1.5">
+              {protectedCategories.map((id) => {
+                const conflict = (categoryImpact[id] ?? 0) > 0
+                return (
+                  <div key={id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => toggleProtect(id)}
+                        className="text-xs text-gray-300 hover:text-gray-500 leading-none"
+                        title="Remove protection"
+                      >
+                        ✕
+                      </button>
+                      <span className="text-xs text-gray-700">🛡 {CATEGORY_LABELS[id] ?? id}</span>
+                    </div>
+                    {conflict
+                      ? <span className="badge bg-amber-100 text-amber-700">⚠ conflict</span>
+                      : <span className="badge bg-green-100 text-green-700">✔ clear</span>
+                    }
+                  </div>
+                )
+              })}
+            </div>
+            {protectedCategories.some((id) => (categoryImpact[id] ?? 0) > 0) && (
+              <p className="text-xs text-amber-700 mt-2 leading-snug border-t border-amber-100 pt-2">
+                Some active levers affect services you want to protect.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Today vs Tomorrow */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">

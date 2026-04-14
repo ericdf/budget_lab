@@ -1,6 +1,6 @@
 import React from 'react'
 import useStore from '../store/useStore'
-import { formatMoney } from '../utils/calculations'
+import { formatMoney, CATEGORY_LABELS } from '../utils/calculations'
 
 // Visual signal config
 const NOW_CONFIG = {
@@ -38,14 +38,19 @@ const TYPE_BORDER = {
 }
 
 export default function LeverCard({ lever }) {
-  const { advancedMode, selectedLevers, toggleLever } = useStore()
+  const { advancedMode, selectedLevers, toggleLever, protectedCategories } = useStore()
   const selected = selectedLevers.includes(lever.id)
+
+  const conflictingProtected = (lever.affects ?? []).filter((id) => protectedCategories.includes(id))
+  const hasConflict = conflictingProtected.length > 0
 
   const now = NOW_CONFIG[lever.now_effect] ?? NOW_CONFIG.none
   const later = LATER_CONFIG[lever.later_effect] ?? LATER_CONFIG.neutral
   const fix = FIX_CONFIG[lever.fix_type] ?? FIX_CONFIG.partial
   const conf = CONF_CONFIG[lever.confidence] ?? CONF_CONFIG.medium
-  const borderCls = TYPE_BORDER[lever.type] ?? 'border-l-gray-300'
+  const borderCls = hasConflict && selected
+    ? 'border-l-amber-500'
+    : TYPE_BORDER[lever.type] ?? 'border-l-gray-300'
 
   const hasImpact = lever.impact_min !== 0 || lever.impact_max !== 0
 
@@ -88,6 +93,14 @@ export default function LeverCard({ lever }) {
           <span className={`badge ${later.cls}`}>{later.label}</span>
           <span className={`badge ${fix.cls}`}>{fix.label}</span>
         </div>
+
+        {/* Protected service conflict warning */}
+        {hasConflict && (
+          <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-700">
+            <span>⚠</span>
+            <span>Affects protected: {conflictingProtected.map((id) => CATEGORY_LABELS[id] ?? id).join(', ')}</span>
+          </div>
+        )}
 
         {/* Advanced detail */}
         {advancedMode && (

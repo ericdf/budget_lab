@@ -15,7 +15,7 @@ const CATEGORY_COLORS = [
 ]
 
 export default function SpendingPanel() {
-  const { scenario } = useStore()
+  const { scenario, protectedCategories, toggleProtect } = useStore()
   const { categoryImpact } = scenario
 
   const sorted = [...budget.categories].sort((a, b) => b.amount - a.amount)
@@ -23,9 +23,14 @@ export default function SpendingPanel() {
   return (
     <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-          Where Money Goes
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Where Money Goes
+          </h2>
+          <span className="text-xs text-gray-400" title="Click the shield to mark services you want to protect">
+            🛡 = protect
+          </span>
+        </div>
 
         {/* Stacked bar summary */}
         <div className="flex h-3 rounded-full overflow-hidden mb-4 gap-px">
@@ -45,18 +50,32 @@ export default function SpendingPanel() {
             const impactCount = categoryImpact[cat.id] || 0
             const impactLevel =
               impactCount >= 3 ? 'high' : impactCount === 2 ? 'medium' : impactCount === 1 ? 'low' : null
+            const isProtected = protectedCategories.includes(cat.id)
+            const hasConflict = isProtected && impactCount > 0
 
             return (
-              <div key={cat.id} className="group relative">
+              <div key={cat.id} className={`group relative rounded-md px-1.5 py-0.5 -mx-1.5 ${isProtected ? 'bg-blue-50/60' : ''}`}>
                 <div className="flex items-center justify-between mb-0.5">
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => toggleProtect(cat.id)}
+                      title={isProtected ? 'Remove protection' : 'Protect this service'}
+                      className={`text-sm leading-none flex-shrink-0 transition-opacity ${isProtected ? 'opacity-100' : 'opacity-20 hover:opacity-60'}`}
+                    >
+                      🛡
+                    </button>
                     <span
                       className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
                     />
-                    <span className="text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>
+                    <span className={`text-xs font-medium leading-tight ${isProtected ? 'text-blue-800' : 'text-gray-700'}`}>{cat.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {impactLevel && (
+                    {hasConflict && (
+                      <span className="badge bg-amber-100 text-amber-700" title="Active levers affect this protected service">
+                        ⚠
+                      </span>
+                    )}
+                    {impactLevel && !hasConflict && (
                       <span
                         className={`badge ${
                           impactLevel === 'high'
@@ -91,7 +110,7 @@ export default function SpendingPanel() {
         </div>
 
         <p className="text-xs text-gray-400 mt-4 leading-snug border-t border-gray-100 pt-3">
-          Bars highlight when active levers affect that spending area.
+          Click 🛡 to mark services you want to protect. Levers that affect protected areas will be flagged.
         </p>
       </div>
     </aside>
