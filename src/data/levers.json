@@ -24,8 +24,8 @@
     "id": "parcel_tax",
     "name_simple": "Add a Parcel Tax",
     "name_advanced": "New General Purpose Parcel Tax",
-    "impact_min": 4000000,
-    "impact_max": 8000000,
+    "impact_min": 6000000,
+    "impact_max": 10000000,
     "type": "revenue",
     "solution_type": "external",
     "now_effect": "high",
@@ -35,10 +35,10 @@
     "implementation": "delayed",
     "affects": [],
     "impacts_services": [],
-    "policy_assumption": "$160–$320 per parcel annually; 2/3 supermajority vote required",
+    "policy_assumption": "$240–$400 per parcel annually; 2/3 supermajority vote required",
     "pricing_basis": "formula",
     "description_simple": "A flat tax on each parcel of land in Berkeley. Requires two-thirds voter approval. Provides stable, predictable annual revenue.",
-    "description_advanced": "A new parcel tax requires a 2/3 supermajority vote and typically takes 12–24 months to implement. Berkeley has ~25,000 parcels; a $160–$320/parcel rate yields $4M–$8M annually. Berkeley has passed several targeted parcel taxes (schools, libraries, fire). A general purpose parcel tax faces higher political risk.",
+    "description_advanced": "A new parcel tax requires a 2/3 supermajority vote and typically takes 12–24 months to implement. Berkeley has ~25,000 parcels; a $240–$400/parcel rate yields $6M–$10M annually. Berkeley has passed several targeted parcel taxes (schools, libraries, fire). A general purpose parcel tax faces higher political risk.",
     "mechanism": "Fixed annual charge per parcel applied to all taxable property. Unlike property tax, not capped by Prop 13 assessed value limits."
   },
   {
@@ -205,8 +205,8 @@
     "id": "real_baseline",
     "name_simple": "Budget Based on Real Costs",
     "name_advanced": "Align Budget Appropriations to Actual Historical Expenditures",
-    "impact_min": 3000000,
-    "impact_max": 8000000,
+    "impact_min": 6000000,
+    "impact_max": 12000000,
     "type": "structural",
     "solution_type": "fix",
     "now_effect": "medium",
@@ -217,7 +217,7 @@
     "affects": ["administration", "public_works", "parks_rec", "community_services"],
     "impacts_services": [],
     "description_simple": "Set department budgets based on what they actually spend, not inflated projections. Removes phantom savings from budgets that are never fully spent.",
-    "description_advanced": "City departments often receive more appropriations than they spend. The gap between appropriated and actual expenditures creates false budget headroom. A structural baseline reset — appropriating based on rolling 3-year actual expenditure averages — removes this fiction and clarifies the real gap. This is an audit recommendation based on consistent patterns of under-expenditure across departments.",
+    "description_advanced": "City departments consistently receive more appropriations than they spend — a pattern documented in multiple budget audits. The gap between appropriated and actual expenditures creates false budget headroom. A structural baseline reset — appropriating based on rolling 3-year actual expenditure averages — removes this fiction. Berkeley's own auditor has identified $6M–$12M in structural over-appropriation that could be recaptured without cutting any actual service.",
     "mechanism": "Administrative budget process change requiring council adoption of a new budgeting policy. Does not require voter approval. Savings come from eliminating structural over-appropriations that never materialize into actual spending."
   },
   {
