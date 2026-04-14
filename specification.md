@@ -1,6 +1,6 @@
 # Berkeley Budget Lab — Product Specification
 
-> **Status:** MVP implemented and deployed  
+> **Status:** Implemented and deployed  
 > **Live:** https://ericdf.github.io/budget_lab/  
 > **Repo:** https://github.com/ericdf/budget_lab
 
@@ -15,10 +15,12 @@ A browser-based interactive tool that allows users to explore ways to close a ci
 - Distinguish real fixes vs. temporary fixes vs. deferrals
 - Make time effects (now vs. later) explicit
 - Make explicit whether a plan **structurally balances** the budget
+- Surface what services users care about protecting and flag conflicts
 
 **Core questions the tool forces the user to answer:**
 > "Am I fixing the problem — or pushing it forward?"  
-> "Does this plan structurally balance the budget?"
+> "Does this plan structurally balance the budget?"  
+> "What do I want to protect?"
 
 This tool is a **structured decision interface**, not a budget simulator. It does not model second-order effects, multi-year compounding, or precise fiscal projections.
 
@@ -33,6 +35,17 @@ There are three types of budget solutions, distinguished throughout the tool:
 | **External funding** | Brings in new revenue from outside the existing base | Tax increases, fee increases, voter-approved measures |
 
 The key distinction is: **structural fixes** and **external funding** can produce a structurally balanced budget. **Temporary fixes** cannot — they borrow against the future.
+
+### Delivery Model Dimension
+
+Some structural levers change *who delivers* a service, not just how much it costs:
+
+| Delivery Model | Meaning |
+|---------------|---------|
+| `city_operated` | Default — city employees provide the service |
+| `contracted` | Private contractor under competitive bid |
+| `concession` | Private operator runs it under long-term lease; city collects rent |
+| `eliminated` | City exits; county or other entity absorbs responsibility |
 
 ---
 
@@ -57,20 +70,23 @@ src/
 ├── App.jsx                      # Root layout (TopBar + three columns + footer)
 ├── index.css                    # Tailwind directives + global styles
 ├── data/
-│   ├── budget.json              # General Fund total, annual gap, spending categories
-│   ├── levers.json              # All 19 policy levers with metadata
-│   └── portfolios.json          # 10 preset lever combinations
+│   ├── budget.json              # General Fund total, gap, categories + reduction_capacity
+│   ├── levers.json              # All 24 policy levers with full metadata
+│   ├── portfolios.json          # 13 preset lever combinations
+│   └── services.json            # 10 Berkeley services with funding/delivery model
 ├── store/
-│   └── useStore.js              # Zustand store: selectedLevers, advancedMode, scenario
+│   └── useStore.js              # Zustand store: selectedLevers, advancedMode,
+│                                #   protectedCategories, scenario
 ├── utils/
 │   └── calculations.js          # calculateScenario(), formatMoney(), formatPct()
 └── components/
     ├── TopBar.jsx               # Sticky header: budget stats + progress bar + mode toggle
-    ├── SpendingPanel.jsx        # Left: spending category bars with impact highlighting
+    ├── SpendingPanel.jsx        # Left: category bars, protect toggles, reduction capacity
     ├── LeversPanel.jsx          # Center: grouped lever cards + portfolio selector + explainer
-    ├── LeverCard.jsx            # Individual lever card with toggle + signal badges
+    ├── LeverCard.jsx            # Individual lever card with toggle, badges, advanced fields
     ├── PortfolioSelector.jsx    # Preset scenario buttons (collapsible)
-    ├── ImpactPanel.jsx          # Right: gap meter, structural balance, today/tomorrow, composition
+    ├── ImpactPanel.jsx          # Right: gap meter, structural balance, today/tomorrow,
+    │                            #   values alignment, plan composition, capital pressure
     └── SummaryText.jsx          # Auto-generated scenario summary + warnings
 ```
 
@@ -84,36 +100,76 @@ src/
 {
   "total_budget": 290000000,
   "deficit": 33000000,
-  "categories": [{ "id": "string", "name": "string", "amount": number, "description": "string" }]
+  "infrastructure_backlog": 1650000000,
+  "categories": [{
+    "id": "string",
+    "name": "string",
+    "amount": number,
+    "description": "string",
+    "reduction_capacity": { "low": number, "medium": number, "high": number }
+  }]
 }
 ```
 
 **Basis:** Berkeley General Fund (discretionary operating budget), approximate FY2025.  
-**Deficit:** Structural annual gap of ~$33M (not the $124M all-funds figure).
+**Deficit:** Structural annual gap of ~$33M (not the $124M all-funds figure).  
+**Infrastructure backlog:** $1.65B estimated unfunded capital need.
+
+`reduction_capacity` — fraction of category budget that could realistically be cut at each intensity level. Used for informational display in SpendingPanel advanced mode.
 
 The 8 spending categories:
 
-| ID | Name | Amount | % of GF |
-|----|------|--------|---------|
-| `public_safety` | Public Safety | $104M | 36% |
-| `pensions_debt` | Pensions & Debt | $40M | 14% |
-| `public_works` | Public Works | $35M | 12% |
-| `administration` | Administration | $33M | 11% |
-| `health` | Health & Human Services | $27M | 9% |
-| `community_services` | Community Services | $25M | 9% |
-| `parks_rec` | Parks & Recreation | $18M | 6% |
-| `other` | Other | $8M | 3% |
+| ID | Name | Amount | % of GF | Cut capacity (low/med/high) |
+|----|------|--------|---------|----------------------------|
+| `public_safety` | Public Safety | $104M | 36% | 3% / 5% / 10% |
+| `pensions_debt` | Pensions & Debt | $40M | 14% | 0% / 0% / 2% |
+| `public_works` | Public Works | $35M | 12% | 3% / 10% / 20% |
+| `administration` | Administration | $33M | 11% | 5% / 15% / 25% |
+| `health` | Health & Human Services | $27M | 9% | 5% / 15% / 25% |
+| `community_services` | Community Services | $25M | 9% | 5% / 15% / 25% |
+| `parks_rec` | Parks & Recreation | $18M | 6% | 5% / 15% / 25% |
+| `other` | Other | $8M | 3% | 10% / 20% / 30% |
 
-### 2.2 Lever (`src/data/levers.json`)
+### 2.2 Service (`src/data/services.json`)
+
+```json
+{
+  "id": "string",
+  "label": "string",
+  "funding_type": "general_fund | enterprise | mixed",
+  "delivery_model": "city_operated | contracted | concession | eliminated",
+  "general_fund_support": number,
+  "enterprise_revenue": number
+}
+```
+
+10 Berkeley services:
+
+| ID | Label | Funding | GF Support | Enterprise Revenue |
+|----|-------|---------|------------|-------------------|
+| `police` | Police Services | general_fund | $80M | — |
+| `fire` | Fire Services | general_fund | $24M | — |
+| `street_maintenance` | Street Maintenance | general_fund | $12M | — |
+| `solid_waste` | Solid Waste & Recycling | enterprise | $0 | $61.3M |
+| `marina` | Berkeley Marina | enterprise | $2M | $4M |
+| `parking` | Parking Services | enterprise | $0 | $12M |
+| `public_health_dept` | Public Health Department | general_fund | $15M | — |
+| `mental_health` | Mental Health Services | general_fund | $8M | — |
+| `library` | Public Library | general_fund | $13M | — |
+| `rec_centers` | Recreation Centers & Aquatics | mixed | $8M | $3M |
+
+**Enterprise fund rule:** Enterprise revenue is tied to the service. Reducing enterprise costs increases the fund surplus but does not automatically increase General Fund revenue — a conscious transfer must be made.
+
+### 2.3 Lever (`src/data/levers.json`)
 
 ```json
 {
   "id": "string",
   "name_simple": "string",
   "name_advanced": "string",
-  "impact_min": "number (dollars)",
-  "impact_max": "number (dollars)",
-  "type": "revenue | spending | structural | temporary",
+  "impact_min": number,
+  "impact_max": number,
+  "type": "revenue | spending | structural | temporary | capital",
   "solution_type": "fix | temporary | external",
   "now_effect": "high | medium | low | none | hurts",
   "later_effect": "helps | neutral | hurts",
@@ -121,33 +177,43 @@ The 8 spending categories:
   "confidence": "high | medium | low",
   "implementation": "immediate | delayed",
   "affects": ["category_id"],
+  "impacts_services": ["service_id"],
   "description_simple": "string",
   "description_advanced": "string",
-  "mechanism": "string"
+  "mechanism": "string",
+
+  // Optional fields:
+  "policy_assumption": "string",
+  "pricing_basis": "formula | city_estimate | directional",
+  "delivery_model": "contracted | concession | eliminated",
+  "enterprise_revenue_retained": boolean,
+  "general_fund_impact": number,
+  "capital_authorization": number,
+  "nonlinear_effect": boolean,
+  "short_term_cost_increase_possible": boolean
 }
 ```
 
 **Field notes:**
 
-- `solution_type` — cross-cutting classification for the structural balance model:
+- `type: "capital"` — lever affects infrastructure debt, not the operating budget directly
+- `solution_type`:
   - `"fix"` → spending and structural levers (directly change ongoing cost/revenue balance)
   - `"temporary"` → temporary/timing levers (shift costs or use one-time savings)
-  - `"external"` → revenue levers (bring in new money requiring external action or voter approval)
-- `now_effect` extends the base enum to include `"hurts"` (lever worsens near-term situation) and `"none"` (no current-year impact)
-- `affects` lists category IDs whose services are impacted; revenue levers that don't cut specific services use `[]`
-- `impact_min/max` — annual fiscal impact in dollars; `0/0` for discipline levers with no direct dollar value (e.g., `let_expire`)
-- `fix_type: "partial"` — treated as structural for composition purposes but acknowledged as unsustainable alone
+  - `"external"` → revenue and capital levers (bring in new money requiring external action)
+- `now_effect` includes `"hurts"` (worsens near-term) and `"none"` (no current-year impact)
+- `affects` — spending category IDs impacted (used for Service Impact and protect conflict detection)
+- `impacts_services` — specific service IDs affected (more granular than `affects`)
+- `policy_assumption` — the specific policy choice behind the estimate (shown in advanced mode)
+- `pricing_basis` — how reliable the estimate is: formula-derived / city estimate / directional
+- `delivery_model` — if this lever changes service delivery, what it changes to
+- `enterprise_revenue_retained: true` — savings stay in enterprise fund; GF benefit is not automatic
+- `general_fund_impact` — direct GF impact for enterprise/delivery-model levers
+- `capital_authorization` — total capital authorized (for bond levers; ≠ operating impact)
+- `nonlinear_effect: true` — reductions can trigger offsetting costs (e.g., vacancy → overtime)
+- `short_term_cost_increase_possible: true` — specifically: safety vacancies covered by overtime
 
-**`solution_type` mapping by `type`:**
-
-| `type` | `solution_type` |
-|--------|----------------|
-| revenue | external |
-| spending | fix |
-| structural | fix |
-| temporary | temporary |
-
-### 2.3 Scenario State (computed by `calculateScenario()`)
+### 2.4 Scenario State (computed by `calculateScenario()`)
 
 ```js
 {
@@ -170,7 +236,7 @@ The 8 spending categories:
 }
 ```
 
-### 2.4 Portfolio (`src/data/portfolios.json`)
+### 2.5 Portfolio (`src/data/portfolios.json`)
 
 ```json
 { "id": "string", "name": "string", "description": "string", "default_levers": ["lever_id"] }
@@ -178,56 +244,75 @@ The 8 spending categories:
 
 ---
 
-## 3. Lever Catalog
+## 3. Lever Catalog (24 levers)
 
-All 19 levers. Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibrated to the $33M gap.
+Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibrated to the $33M gap.
 
 ### Revenue — `solution_type: "external"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
-|----|-------------|-------------|-----|-------|----------|-----------|
-| `sales_tax` | Raise Sales Tax | $9M–$10M | high | helps | permanent | high |
-| `parcel_tax` | Add a Parcel Tax | $4M–$8M | high | helps | permanent | medium |
-| `fee_increases` | Raise City Fees | $2M–$4M | medium | helps | permanent | high |
-| `let_expire` | Accept Expiring Revenue | $0–$0 | **hurts** | helps | permanent | high |
-| `enterprise_fees` | Update Fees to Cover Costs | $2M–$6M | low | helps | permanent | medium |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | Policy Assumption |
+|----|-------------|-------------|-----|-------|----------|------|-------------------|
+| `sales_tax` | Raise Sales Tax | $9M–$10M | high | helps | permanent | high | 0.5–1% rate; simple majority |
+| `parcel_tax` | Add a Parcel Tax | $4M–$8M | high | helps | permanent | medium | $160–$320/parcel; 2/3 majority |
+| `fee_increases` | Raise City Fees | $2M–$4M | medium | helps | permanent | high | 15–25% fee increase |
+| `let_expire` | Accept Expiring Revenue | $0 | **hurts** | helps | permanent | high | — |
+| `enterprise_fees` | Update Fees to Cover Costs | $2M–$6M | low | helps | permanent | medium | Cost-of-service study + Prop 218 |
 
-`let_expire` has zero dollar impact — it is a discipline choice that clarifies the true structural gap.
+`let_expire` — discipline choice that forces recognition of the real structural gap; no dollar impact.  
+`enterprise_fees` — `enterprise_revenue_retained: true`; impacts `marina`, `parking`, `solid_waste`.
 
-### Spending — `solution_type: "fix"` (4)
+### Spending — `solution_type: "fix"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
-|----|-------------|-------------|-----|-------|----------|-----------|
-| `across_the_board` | Cut All Departments Equally | $3M–$6M | high | helps | permanent | high |
-| `targeted_reductions` | Cut Lower-Priority Programs | $2M–$5M | medium | helps | permanent | medium |
-| `vacancy_freeze` | Freeze Hiring | $1M–$3M | medium | helps | **partial** | high |
-| `program_elimination` | Eliminate Programs | $3M–$6M | medium | helps | permanent | medium |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | Notes |
+|----|-------------|-------------|-----|-------|----------|------|-------|
+| `across_the_board` | Cut All Departments Equally | $3M–$6M | high | helps | permanent | high | |
+| `targeted_reductions` | Cut Lower-Priority Programs | $2M–$5M | medium | helps | permanent | medium | |
+| `reduce_council_staff` | Reduce Council and Mayoral Staff | $0.3M–$1.3M | low | helps | permanent | high | Symbolic + real |
+| `vacancy_freeze` | Freeze Hiring | $1M–$3M | medium | helps | **partial** | high | `nonlinear_effect: true` |
+| `program_elimination` | Eliminate Programs | $3M–$6M | medium | helps | permanent | medium | |
 
-### Structural — `solution_type: "fix"` (5)
+`vacancy_freeze` — partial fix; safety vacancies often covered by overtime, so actual savings may be lower than projected.
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
-|----|-------------|-------------|-----|-------|----------|-----------|
-| `real_baseline` | Budget Based on Real Costs | $3M–$8M | medium | helps | permanent | medium |
-| `outsourcing` | Outsource Some Services | $1M–$3M | low | helps | delayed | **low** |
-| `shift_to_county` | Shift Programs to County | $1M–$2M | low | helps | delayed | **low** |
-| `service_level_reduction` | Reduce Service Levels | $2M–$4M | medium | helps | permanent | medium |
-| `compensation_restraint` | Hold Down Raises | $2M–$5M | **none** | helps | delayed | **low** |
+### Structural — `solution_type: "fix"` (8)
+
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | Delivery |
+|----|-------------|-------------|-----|-------|----------|------|---------|
+| `real_baseline` | Budget Based on Real Costs | $3M–$8M | medium | helps | permanent | medium | — |
+| `outsourcing` | Outsource Some Services | $1M–$3M | low | helps | delayed | **low** | contracted |
+| `waste_outsource` | Contract Out Waste Collection | $1M–$3M | low | helps | delayed | **low** | contracted |
+| `marina_concession` | Lease Out the Marina | $1M–$3M | low | helps | delayed | **low** | concession |
+| `shift_to_county` | Shift Programs to County | $1M–$2M | low | helps | delayed | **low** | eliminated |
+| `health_shift_county` | Transfer Health Dept to County | $3M–$7M | low | helps | delayed | **low** | eliminated |
+| `service_level_reduction` | Reduce Service Levels | $2M–$4M | medium | helps | permanent | medium | `nonlinear_effect: true` |
+| `compensation_restraint` | Hold Down Raises | $2M–$5M | **none** | helps | delayed | **low** | — |
+
+`waste_outsource` — `enterprise_revenue_retained: true`; savings primarily stay in enterprise fund.  
+`marina_concession` — `enterprise_revenue_retained: false`; concession fee flows directly to GF.  
+`health_shift_county` — Berkeley is the only Alameda County city with its own health department.
 
 ### Temporary / Timing — `solution_type: "temporary"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
-|----|-------------|-------------|-----|-------|----------|-----------|
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf |
+|----|-------------|-------------|-----|-------|----------|------|
 | `section_115` | Use Pension Reserve Fund | $3M–$6M | high | **hurts** | **temporary** | high |
 | `skip_pension` | Reduce Pension Contributions | $1M–$3M | medium | **hurts** | **temporary** | medium |
 | `capital_deferral` | Delay Capital Projects | $2M–$5M | medium | **hurts** | **temporary** | medium |
 | `fund_balance` | Use Reserves | $3M–$6M | high | **hurts** | **temporary** | high |
 | `restricted_transfer` | Use Funds Set Aside for Other Purposes | $3M–$5M | medium | **hurts** | **temporary** | high |
 
-`restricted_transfer` represents diverting restricted or special-purpose fund balances (e.g., workers' comp reserves) — a documented practice in Berkeley's recent budgets.
+`restricted_transfer` — diverting restricted fund balances (e.g., workers' comp reserves); documented Berkeley practice.
+
+### Capital & Infrastructure — `solution_type: "external"` (1)
+
+| ID | Simple Name | Operating Impact | Capital Authorized | Conf | Assumption |
+|----|-------------|-----------------|-------------------|------|-----------|
+| `infrastructure_bond` | Pass Infrastructure Bond Measure | $0–$2M | $300M | medium | $300M GO bond; 55% threshold |
+
+Capital levers **do not directly close the annual operating gap**. Operating benefit is only from avoided emergency repair costs. Bond proceeds are legally restricted to capital expenditures. Bond repaid through voter-approved property tax increase.
 
 ---
 
-## 4. Portfolio Presets (10)
+## 4. Portfolio Presets (13)
 
 | ID | Name | Levers |
 |----|------|--------|
@@ -241,6 +326,9 @@ All 19 levers. Dollar amounts = **estimated annual fiscal impact** on the Genera
 | `status_quo` | Status Quo (Current Approach) | section_115, restricted_transfer, fund_balance |
 | `structural_balance` | Structural Balance | targeted_reductions, enterprise_fees, sales_tax |
 | `delay_problem` | Delay the Problem | section_115, capital_deferral, fund_balance, skip_pension |
+| `close_the_gap` | Close the Gap | sales_tax, parcel_tax, enterprise_fees, targeted_reductions, real_baseline |
+| `protect_services` | Protect Services | sales_tax, parcel_tax, fee_increases, compensation_restraint, real_baseline |
+| `shift_delivery` | Shift Delivery Model | waste_outsource, marina_concession, health_shift_county, outsourcing |
 
 Portfolio detection is **exact-match**: a preset is highlighted only when `selectedLevers` contains exactly the same IDs as `default_levers`.
 
@@ -258,13 +346,14 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 │  LEFT          │  CENTER               │  RIGHT                 │
 │  Spending      │  Portfolio Selector   │  Gap Status            │
 │  Overview      │  ─────────────────── │  Structural Balance ✔✖ │
-│                │  Current approach     │  Today vs Tomorrow     │
-│  8 categories  │  explainer (collapse) │  Plan Composition      │
-│  bar chart     │  ─────────────────── │  Service Impact        │
-│  w/ impact     │  Revenue levers       │  ─────────────────── │
-│  highlighting  │  Spending levers      │  Scenario Summary      │
-│                │  Structural levers    │  + Warnings            │
-│                │  Temp/Timing levers   │                        │
+│                │  Current approach     │  Values Alignment      │
+│  8 categories  │  explainer (collapse) │  Today vs Tomorrow     │
+│  bar chart     │  ─────────────────── │  Plan Composition      │
+│  w/ protect 🛡 │  Revenue levers       │  Service Impact        │
+│  toggles       │  Spending levers      │  Capital Pressure      │
+│  + reduction   │  Structural levers    │  ─────────────────── │
+│  capacity      │  Temp/Timing levers   │  Scenario Summary      │
+│  (advanced)    │  Capital levers       │  + Warnings            │
 │                │  ─────────────────── │                        │
 │                │  Pension note         │                        │
 └────────────────┴───────────────────────┴────────────────────────┘
@@ -272,24 +361,31 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Responsive:** Left panel stacks above center on mobile (< `lg` breakpoint). Right panel stacks below. Right panel uses `sticky top-[108px]` (accounts for taller TopBar with context line).
+**Responsive:** Left panel stacks above center on mobile (< `lg` breakpoint). Right panel stacks below. Right panel uses `sticky top-[108px]`.
 
 ### 5.1 TopBar
 
 **Field labels:**
-- "General Fund" (was "Total Budget") — $290M
-- "Annual Budget Gap" (was "Deficit to Close") — $33M
+- "General Fund" — $290M
+- "Annual Budget Gap" — $33M
 - "Remaining Gap" — dynamic
 
-**Context line** (persistent, small, below stats row):
+**Context line** (persistent, small):
 > "This tool focuses on the yearly budget gap. Long-term obligations like pensions are not included but are affected by some choices."
 
 ### 5.2 SpendingPanel (Left)
 
 - Stacked multi-color bar at top showing budget proportions
-- 8 category rows: dot + name + optional impact badge + % + horizontal bar
-- Impact badge: 1 lever = low (gray), 2 = medium (yellow), 3+ = high (orange)
-- Hover tooltip shows description and dollar amount
+- 8 category rows with:
+  - **🛡 protect toggle** — click to mark service as protected; row highlights blue when protected
+  - Color dot + name
+  - ⚠ badge when protected AND active levers affect this category
+  - Impact badge (low/med/high) when not in conflict
+  - % of budget
+  - Horizontal bar
+- **Advanced mode adds:** reduction capacity row per category (Low: X% · Med: Y% · High: Z% · $amount)
+- Hover tooltip: description, dollar amount, cut capacity range
+- Footer: "Click 🛡 to mark services you want to protect. Levers that affect protected areas will be flagged."
 
 ### 5.3 LeversPanel (Center)
 
@@ -299,16 +395,38 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
   - Moving money between funds (e.g., workers' comp reserves)
   - Delaying costs (deferred maintenance, reduced pension payments)
   - Footer: "These help now but do not fix the underlying gap."
-- Four grouped lever sections (Revenue / Spending Changes / Structural Changes / Temporary & Timing)
+- **Five grouped lever sections:**
+  - Revenue (blue)
+  - Spending Changes (red)
+  - Structural Changes (purple)
+  - Temporary / Timing Tools (orange)
+  - **Capital & Infrastructure (teal)**
 - Required global sentence (amber box, bottom): *"Most pension costs come from past promises and don't go away quickly."*
 
 ### 5.4 LeverCard
 
 **Simple mode:** `name_simple` + `description_simple` + signal badges + toggle
 
-**Advanced mode adds:** `name_advanced`, `description_advanced`, impact range, confidence, timing, mechanism
+**Advanced mode adds:**
+- `name_advanced`, `description_advanced`
+- Impact range (`impact_min`–`impact_max`)
+- Capital authorized (if `capital_authorization` present)
+- Confidence
+- Timing (immediate / delayed)
+- Assumption (`policy_assumption` if present)
+- Estimate basis (`pricing_basis` if present): formula-derived / city estimate / directional
+- Delivery model (if `delivery_model` present)
+- Enterprise savings note (if `enterprise_revenue_retained` present)
+- How it works (`mechanism`)
 
-**Card left border color by `type`:** blue (revenue), red (spending), purple (structural), orange (temporary)
+**Conflict / nonlinear warnings (always visible when applicable):**
+- `⚠ Affects protected: [category names]` — when lever affects a protected category
+- `⚠ Vacancies in safety depts are often covered by overtime...` — when `nonlinear_effect: true` and `short_term_cost_increase_possible: true`
+- `⚠ Reductions here can trigger offsetting costs...` — when `nonlinear_effect: true` only
+
+**Card left border color by `type`:**
+- blue (revenue), red (spending), purple (structural), orange (temporary), **teal (capital)**
+- Amber when selected AND conflicts with a protected category
 
 **Signal badge color table:**
 
@@ -319,9 +437,9 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 | Now | low | gray |
 | Now | none | gray |
 | Now | hurts | red |
-| Later | helps | blue |
-| Later | neutral | gray |
-| Later | hurts | orange |
+| Later | ✓ | blue |
+| Later | ~ | gray |
+| Later | ✗ | orange |
 | Fix | permanent | green |
 | Fix | temporary | orange |
 | Fix | delayed | blue |
@@ -331,16 +449,28 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 
 **Gap Status block:** large %, progress bar, "$Xm saved / $Ym gap left"
 
-**Structural Balance block** *(new)*:
+**Structural Balance block:**
 - ✔ green: "Balanced — Recurring revenues ≥ recurring costs"
 - ✖ red: "Not balanced — [Gap is not fully closed | Relies on temporary measures]"
-- Shows "No levers selected" when empty
+- "No levers selected" when empty
+
+**Values Alignment block** *(only shown when ≥1 category protected)*:
+- Lists each protected category with ✔ clear / ⚠ conflict badge
+- ✕ button to remove protection
+- Summary note if any conflicts exist
+- "Some active levers affect services you want to protect."
 
 **Today vs Tomorrow bars:** green (helps now) / blue (helps later) / orange (pushes cost forward) — each scaled against the full deficit
 
 **Plan Composition block:** segmented bar + % rows for permanent/delayed/temporary + future pressure label
 
 **Service Impact block:** affected categories with severity badges (only shown when categories are affected)
+
+**Capital Pressure block** *(always visible, teal border)*:
+- "Infrastructure backlog: $1.65B"
+- If `infrastructure_bond` active: "Bond measure: −$300M" + progress bar showing % addressed
+- "Still unfunded: $Xm"
+- Note: "Capital spending doesn't close the annual gap — but deferring it makes future budgets harder."
 
 **Scenario Summary (`SummaryText`):** auto-generated text, up to 5 lines
 
@@ -358,7 +488,7 @@ impact_max_total = Σ impact_max (active levers)
 gap_closed_pct   = (impact_min_total / deficit) × 100
 ```
 
-Conservative: uses `impact_min` for the gap-closed percentage.
+Conservative: uses `impact_min` for the gap-closed percentage. Capital levers contribute their small operating impact (avoided repair costs) to the gap calculation, but this is made explicit in the UI.
 
 ### 6.2 Composition (dollar-weighted, floored at 0)
 
@@ -429,7 +559,22 @@ Auto-generated, up to 5 lines, shown in the right panel:
 
 ---
 
-## 8. Language Constraints
+## 8. State Management
+
+Zustand store (`src/store/useStore.js`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `selectedLevers` | `string[]` | IDs of active levers |
+| `advancedMode` | `boolean` | Simple vs Advanced card display |
+| `protectedCategories` | `string[]` | Category IDs marked as protected by user |
+| `scenario` | `ScenarioState` | Derived, recomputed eagerly on every toggle |
+
+Actions: `toggleLever(id)`, `toggleAdvancedMode()`, `applyPortfolio(portfolioId)`, `clearAll()`, `toggleProtect(categoryId)`
+
+---
+
+## 9. Language Constraints
 
 ### Allowed in Simple View
 - "helps now" / "helps later"
@@ -452,7 +597,7 @@ Displayed in TopBar:
 
 ---
 
-## 9. Visual Encoding
+## 10. Visual Encoding
 
 | Concept | Visual |
 |---------|--------|
@@ -468,25 +613,15 @@ Displayed in TopBar:
 | Future pressure: high | red label |
 | Future pressure: medium | yellow label |
 | Future pressure: low | green label |
+| Capital lever | teal border |
+| Protected category | blue tint, shield icon |
+| Protected + conflict | amber ⚠ badge |
+| Lever conflicts with protect | amber border + warning text |
 
 **Berkeley brand colors** (Tailwind custom tokens):
 - `berkeley-blue`: `#003262` — headers, selected states, primary actions
 - `berkeley-gold`: `#FDB515` — Advanced mode toggle when on
 - `berkeley-blue-mid`: `#3B7EA1` — secondary blue tones
-
----
-
-## 10. State Management
-
-Zustand store (`src/store/useStore.js`):
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `selectedLevers` | `string[]` | IDs of active levers |
-| `advancedMode` | `boolean` | Simple vs Advanced card display |
-| `scenario` | `ScenarioState` | Derived, recomputed eagerly on every toggle |
-
-Actions: `toggleLever(id)`, `toggleAdvancedMode()`, `applyPortfolio(portfolioId)`, `clearAll()`
 
 ---
 
@@ -501,41 +636,33 @@ Actions: `toggleLever(id)`, `toggleAdvancedMode()`, `applyPortfolio(portfolioId)
 
 **Required:** GitHub Pages source set to "GitHub Actions" (Settings → Pages → Source).
 
-### Build output
-
-```
-dist/index.html          ~0.8 kB gzip
-dist/assets/index-*.css  ~23 kB raw / 4.7 kB gzip
-dist/assets/index-*.js   ~195 kB raw / 61 kB gzip
-```
-
-Total transfer: ~66 kB gzip.
-
 ---
 
-## 12. Implementation Phases
+## 12. Implementation Status
 
-### Phase 1 — MVP (complete)
+### Complete
 - General Fund baseline ($290M) / structural annual gap ($33M)
-- 19 levers across 4 groups with `solution_type` field
-- 10 portfolio presets including Status Quo, Structural Balance, Delay the Problem
+- 24 levers across 5 groups (revenue, spending, structural, temporary, capital)
+- 13 portfolio presets
 - Structural balance indicator (✔/✖) in right panel
 - `not_structural` warning in summary text
 - "How is Berkeley's budget currently balanced?" explainer panel
 - Simple + Advanced mode toggle
+- Service protection layer (🛡 toggles, Values Alignment panel, lever conflict warnings)
+- Services entity (`services.json`) with funding type and delivery model
+- Delivery model dimension on structural levers (contracted / concession / eliminated)
+- Enterprise fund annotation (savings retention rule, display in advanced mode)
+- Revenue lever pricing basis and policy assumptions (advanced mode)
+- Nonlinear effect warnings on vacancy freeze and service level reduction
+- Reduction capacity per spending category (advanced mode in SpendingPanel)
+- Capital Pressure panel ($1.65B backlog, bond measure progress)
 - GitHub Pages deployment via Actions
 
-### Phase 2 — Data Refinement
-- Update impact ranges from CAFR and budget documents
-- Refine category mapping to match published budget line items
-- Add data source citations and assumption notes per lever
-- Surface confidence intervals more explicitly in Advanced view
-
-### Phase 3 — Sharing and Extension
+### Potential Next Steps
 - Shareable scenario URLs (encode selected levers in URL hash)
 - Export scenario as PDF or image
+- Add data source citations per lever (CAFR, budget documents)
 - City-specific configuration (swap data layer for other municipalities)
-- Assumptions editor for advanced users
 
 ---
 
@@ -548,8 +675,10 @@ A user should be able to:
 3. Identify at least 2 alternative strategies with different tradeoff profiles
 4. Recognize that high short-term savings can come with long-term costs
 5. Understand whether their plan **structurally balances** the budget
+6. See immediately when their chosen levers conflict with what they want to protect
 
 The tool succeeds if a non-expert user, after 5 minutes of exploration, can articulate:
 - Why the "Status Quo" preset shows ✖ (not structurally balanced)
 - Why the "Structural Balance" preset shows ✔
 - What the difference is between those two approaches
+- Why outsourcing waste collection saves less General Fund money than expected
