@@ -87,11 +87,12 @@ export default function TopBar() {
       </div>
 
       {/* Context line */}
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-2 flex items-end justify-between gap-4">
         <p className="text-xs text-white/50 leading-snug">
           This tool focuses on the yearly budget gap. Long-term obligations like pensions are not
           included but are affected by some choices.
         </p>
+        <span className="text-xs text-white/30 flex-shrink-0 font-mono">{__COMMIT__}</span>
       </div>
     </header>
   )
