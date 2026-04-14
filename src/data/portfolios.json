@@ -2,18 +2,18 @@
   {
     "id": "current_proposal",
     "name": "Current Council Proposal",
-    "description": "The package under active consideration: a 0.5% sales tax and infrastructure bond on the ballot this fall.",
-    "default_levers": ["sales_tax", "infrastructure_bond"],
+    "description": "Ballot revenue measure plus the budget reduction plan already under discussion: vacancy freeze, targeted cuts, and reserve bridges.",
+    "default_levers": ["sales_tax", "vacancy_freeze", "targeted_reductions", "real_baseline", "section_115", "capital_deferral"],
     "featured": true,
     "featured_label": "Current Proposal"
   },
   {
     "id": "austerity_cuts",
-    "name": "Cuts Only — No New Revenue",
-    "description": "The alternative if no revenue measure passes. Deep spending cuts across all departments — still falls short of closing the gap.",
-    "default_levers": ["across_the_board", "targeted_reductions", "program_elimination", "service_level_reduction", "vacancy_freeze"],
+    "name": "If Revenue Fails — Cuts Only",
+    "description": "Maximum feasible spending cuts and reserve draws with no new revenue. Painful and still leaves a gap.",
+    "default_levers": ["across_the_board", "vacancy_freeze", "targeted_reductions", "program_elimination", "service_level_reduction", "real_baseline", "section_115", "fund_balance", "capital_deferral", "restricted_transfer"],
     "featured": true,
-    "featured_label": "~10–12% Cuts"
+    "featured_label": "If Tax Fails (~10–12% Cuts)"
   },
   {
     "id": "keep_everything",

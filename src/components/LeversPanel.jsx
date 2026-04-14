@@ -25,20 +25,24 @@ export default function LeversPanel() {
           </p>
           <p className="text-xs text-gray-700 leading-snug mb-2">
             Berkeley faces a <span className="font-semibold">$33M annual structural deficit</span>.
-            The council is currently considering:
+            The council's current budget package combines:
           </p>
           <ul className="text-xs text-gray-700 space-y-1 mb-2">
             <li className="flex items-start gap-1.5">
               <span className="text-berkeley-blue mt-0.5">→</span>
-              <span>A <span className="font-semibold">0.5% sales tax increase</span> (~$9M/year, requires voter approval)</span>
+              <span>A <span className="font-semibold">0.5% sales tax</span> on the fall ballot (~$9M/year if voters approve)</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-berkeley-blue mt-0.5">→</span>
-              <span>A <span className="font-semibold">$300M infrastructure bond</span> (capital only — does not close the operating gap)</span>
+              <span><span className="font-semibold">Spending cuts</span> already underway: vacancy freeze, targeted reductions, reserve draws</span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <span className="text-gray-400 mt-0.5">+</span>
+              <span className="text-gray-500">A <span className="font-medium">$300M infrastructure bond</span> — separate capital measure, does not close the operating gap</span>
             </li>
           </ul>
           <p className="text-xs text-gray-500 leading-snug">
-            The alternative if no revenue measure passes: roughly <span className="font-semibold text-red-700">10–12% cuts across all departments</span>, including potential layoffs in public safety.
+            If the sales tax fails: deeper cuts across all departments — up to 10–12% — are the likely alternative, including layoffs in public safety.
           </p>
         </div>
 
