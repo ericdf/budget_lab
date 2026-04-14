@@ -63,7 +63,7 @@
     "id": "close_the_gap",
     "name": "Close the Gap",
     "description": "Revenue increases plus targeted spending cuts — sized to fully close the structural deficit.",
-    "default_levers": ["sales_tax", "parcel_tax", "enterprise_fees", "real_baseline", "across_the_board", "targeted_reductions", "fee_increases", "program_elimination"]
+    "default_levers": ["sales_tax", "parcel_tax", "targeted_reductions", "real_baseline"]
   },
   {
     "id": "protect_services",

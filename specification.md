@@ -167,7 +167,7 @@ The 8 spending categories:
   "id": "string",
   "name_simple": "string",
   "name_advanced": "string",
-  "impact_min": number,
+  "impact_min": number,             // General Fund impact only (not enterprise-only savings)
   "impact_max": number,
   "type": "revenue | spending | structural | temporary | capital",
   "solution_type": "fix | temporary | external",
@@ -176,6 +176,8 @@ The 8 spending categories:
   "fix_type": "permanent | temporary | delayed | partial",
   "confidence": "high | medium | low",
   "implementation": "immediate | delayed",
+  "counts_toward_gap": boolean,     // false for capital and enterprise-only-no-pathway levers
+  "counts_now": boolean,            // false for delayed levers; excluded from effective-now calculation
   "affects": ["category_id"],
   "impacts_services": ["service_id"],
   "description_simple": "string",
@@ -187,39 +189,60 @@ The 8 spending categories:
   "pricing_basis": "formula | city_estimate | directional",
   "delivery_model": "contracted | concession | eliminated",
   "enterprise_revenue_retained": boolean,
+  "enterprise_effect_type": "subsidy_reduction | margin_transfer | none",
   "general_fund_impact": number,
+  "general_fund_impact_min": number,
+  "general_fund_impact_max": number,
+  "gf_pathway": "string",           // describes how enterprise savings reach the GF
   "capital_authorization": number,
   "nonlinear_effect": boolean,
-  "short_term_cost_increase_possible": boolean
+  "short_term_cost_increase_possible": boolean,
+  "service_domain": "public_safety",  // marks levers with nonlinear safety-staffing effects
+  "attrition_risk": "low | medium | high",
+  "pension_effect": "reduces_future_liability",
+  "shares_budget_pool": "string",    // pool ID for overlap detection
+  "overlaps_with": ["lever_id"],
+  "mutually_exclusive_with": ["lever_id"]
 }
 ```
 
 **Field notes:**
 
-- `type: "capital"` — lever affects infrastructure debt, not the operating budget directly
-- `solution_type`:
-  - `"fix"` → spending and structural levers (directly change ongoing cost/revenue balance)
-  - `"temporary"` → temporary/timing levers (shift costs or use one-time savings)
-  - `"external"` → revenue and capital levers (bring in new money requiring external action)
-- `now_effect` includes `"hurts"` (worsens near-term) and `"none"` (no current-year impact)
-- `affects` — spending category IDs impacted (used for Service Impact and protect conflict detection)
-- `impacts_services` — specific service IDs affected (more granular than `affects`)
-- `policy_assumption` — the specific policy choice behind the estimate (shown in advanced mode)
-- `pricing_basis` — how reliable the estimate is: formula-derived / city estimate / directional
-- `delivery_model` — if this lever changes service delivery, what it changes to
-- `enterprise_revenue_retained: true` — savings stay in enterprise fund; GF benefit is not automatic
-- `general_fund_impact` — direct GF impact for enterprise/delivery-model levers
-- `capital_authorization` — total capital authorized (for bond levers; ≠ operating impact)
-- `nonlinear_effect: true` — reductions can trigger offsetting costs (e.g., vacancy → overtime)
-- `short_term_cost_increase_possible: true` — specifically: safety vacancies covered by overtime
+- `impact_min/max` — **General Fund impact only**. Enterprise-only improvements that do not flow to the GF are excluded.
+- `counts_toward_gap: false` — capital levers and enterprise-only levers with no GF pathway. These do not contribute to any gap metric.
+- `counts_now: false` — delayed levers (e.g., compensation restraint, outsourcing) whose savings do not materialize in the current fiscal year. They contribute to "full potential" but not to `gap_closed_pct`.
+- `now_effect` weights: `high=1.0, medium=0.7, low=0.4, none=0.0` — used in the weighted effective-now formula.
+- `enterprise_effect_type`:
+  - `subsidy_reduction` — GF saves by no longer subsidizing the enterprise fund (e.g., enterprise_fees, marina_concession)
+  - `margin_transfer` — enterprise operational savings are explicitly transferred to GF (e.g., waste_outsource)
+- `gf_pathway` — required when `enterprise_revenue_retained: true`; describes the mechanism by which enterprise savings reach the GF.
+- `service_domain: "public_safety"` — levers affecting safety staffing where cuts may trigger overtime or accelerate attrition, reducing actual savings below nominal estimates.
+- `attrition_risk: "high"` — levers that may cause sworn staff to leave. Triggers warning when ≥2 such levers are active.
+- `pension_effect: "reduces_future_liability"` — improves long-term pension trajectory but does not affect current-year gap metrics.
+- `shares_budget_pool` — levers drawing from the same spending pool. Triggers overlap warning when ≥3 `discretionary_spending` or ≥2 `reserves` levers are active.
+
+**Budget pool IDs:**
+- `discretionary_spending` — operating spending levers (across_the_board, targeted_reductions, vacancy_freeze, program_elimination, service_level_reduction, real_baseline)
+- `reserves` — one-time draws (section_115, skip_pension, capital_deferral, fund_balance, restricted_transfer)
+- `enterprise` — enterprise fund levers (enterprise_fees, waste_outsource, marina_concession)
+- `voter_revenue` — measures requiring voter approval (sales_tax, parcel_tax)
+
+**Enterprise fund rule:** Enterprise levers may affect the General Fund through two mechanisms:
+1. **Subsidy reduction** — elimination of General Fund support for an enterprise fund
+2. **Surplus transfer** — excess enterprise revenue made available to the GF through explicit policy choice
+
+Enterprise improvements that stay within the enterprise fund (no GF pathway) must NOT be counted toward gap closure.
 
 ### 2.4 Scenario State (computed by `calculateScenario()`)
 
 ```js
 {
-  impact_min_total: number,        // Σ impact_min for active levers
-  impact_max_total: number,        // Σ impact_max for active levers
-  gap_closed_pct: number,          // (impact_min_total / deficit) × 100
+  impact_min_total: number,        // Σ impact_min for ALL active levers (raw, unweighted)
+  impact_max_total: number,        // Σ impact_max for ALL active levers
+  effective_impact_now: number,    // Σ (impact_min × now_weight) for counts_now:true levers only
+  potential_impact: number,        // Σ impact_min for counts_toward_gap:true levers (full potential)
+  gap_closed_pct: number,          // effective_impact_now / deficit × 100  ← primary metric
+  potential_gap_pct: number,       // potential_impact / deficit × 100       ← secondary metric
   structural_share: number,        // 0–1: permanent+partial impact / positive total
   temporary_share: number,         // 0–1: temporary impact / positive total
   delayed_share: number,           // 0–1: delayed impact / positive total
@@ -229,10 +252,19 @@ The 8 spending categories:
   structurally_balanced: boolean,  // temporary_share < 0.2 AND gap_closed_pct >= 100
   future_pressure: "low|medium|high",
   warnings: string[],
+  overlapping_pools: string[],     // pool IDs where ≥threshold levers are active
   categoryImpact: { [id]: count }, // number of active levers affecting each category
   topCategories: string[],         // top 3 most-affected category IDs
   dominantType: "permanent|temporary|delayed|mixed",
-  activeCount: number
+  activeCount: number,
+  scenario_viability: {
+    closes_gap_now: boolean,              // gap_closed_pct >= 100
+    mostly_structural: boolean,           // structural_share >= 0.6
+    high_uncertainty: boolean,            // low-confidence levers > 40% of active
+    overlapping_levers: boolean,
+    relies_on_enterprise_transfer: boolean,
+    overall: "weak | plausible | strong"
+  }
 }
 ```
 
@@ -250,16 +282,16 @@ Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibra
 
 ### Revenue — `solution_type: "external"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | Policy Assumption |
-|----|-------------|-------------|-----|-------|----------|------|-------------------|
-| `sales_tax` | Raise Sales Tax | $9M–$10M | high | helps | permanent | high | 0.5–1% rate; simple majority |
-| `parcel_tax` | Add a Parcel Tax | $4M–$8M | high | helps | permanent | medium | $160–$320/parcel; 2/3 majority |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | counts_now | Policy Assumption |
+|----|-------------|-------------|-----|-------|----------|------|------------|-------------------|
+| `sales_tax` | Raise Sales Tax | $9M–$10M | high | helps | permanent | high | ✔ | 0.5% transactions and use tax; simple majority |
+| `parcel_tax` | Add a Parcel Tax | $6M–$10M | high | helps | permanent | medium | ✔ | $240–$400/parcel; 2/3 majority |
 | `fee_increases` | Raise City Fees | $2M–$4M | medium | helps | permanent | high | 15–25% fee increase |
 | `let_expire` | Accept Expiring Revenue | $0 | **hurts** | helps | permanent | high | — |
 | `enterprise_fees` | Update Fees to Cover Costs | $2M–$6M | low | helps | permanent | medium | Cost-of-service study + Prop 218 |
 
-`let_expire` — discipline choice that forces recognition of the real structural gap; no dollar impact.  
-`enterprise_fees` — `enterprise_revenue_retained: true`; impacts `marina`, `parking`, `solid_waste`.
+`let_expire` — `counts_toward_gap: false`, `counts_now: false`; discipline choice, no dollar impact.  
+`enterprise_fees` — `enterprise_effect_type: "subsidy_reduction"`; `counts_now: false` (implementation delayed); GF impact $2M–$6M via subsidy reduction pathway.
 
 ### Spending — `solution_type: "fix"` (5)
 
@@ -277,7 +309,7 @@ Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibra
 
 | ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf | Delivery |
 |----|-------------|-------------|-----|-------|----------|------|---------|
-| `real_baseline` | Budget Based on Real Costs | $3M–$8M | medium | helps | permanent | medium | — |
+| `real_baseline` | Budget Based on Real Costs | $6M–$12M | medium | helps | permanent | medium | — |
 | `outsourcing` | Outsource Some Services | $1M–$3M | low | helps | delayed | **low** | contracted |
 | `waste_outsource` | Contract Out Waste Collection | $1M–$3M | low | helps | delayed | **low** | contracted |
 | `marina_concession` | Lease Out the Marina | $1M–$3M | low | helps | delayed | **low** | concession |
@@ -286,11 +318,16 @@ Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibra
 | `service_level_reduction` | Reduce Service Levels | $2M–$4M | medium | helps | permanent | medium | `nonlinear_effect: true` |
 | `compensation_restraint` | Hold Down Raises | $2M–$5M | **none** | helps | delayed | **low** | — |
 
-`waste_outsource` — `enterprise_revenue_retained: true`; savings primarily stay in enterprise fund.  
-`marina_concession` — `enterprise_revenue_retained: false`; concession fee flows directly to GF.  
-`health_shift_county` — Berkeley is the only Alameda County city with its own health department.
+`waste_outsource` — `enterprise_effect_type: "margin_transfer"`; GF pathway: "reduced operating cost with fees held constant; surplus transferred to GF."  
+`marina_concession` — `enterprise_effect_type: "subsidy_reduction"`; GF pathway: "elimination of GF subsidy plus concession payment."  
+`health_shift_county` — Berkeley is the only Alameda County city with its own health department.  
+`compensation_restraint` — `counts_now: false`; `attrition_risk: "high"`; `pension_effect: "reduces_future_liability"`.  
+`service_level_reduction` — `service_domain: "public_safety"`; `attrition_risk: "high"`.  
+`vacancy_freeze` — `service_domain: "public_safety"`; `attrition_risk: "high"`; safety vacancies often backfilled by overtime.
 
 ### Temporary / Timing — `solution_type: "temporary"` (5)
+
+All temporary levers: `counts_toward_gap: true`, `counts_now: true`, `shares_budget_pool: "reserves"`.
 
 | ID | Simple Name | Impact Range | Now | Later | Fix Type | Conf |
 |----|-------------|-------------|-----|-------|----------|------|
@@ -306,29 +343,35 @@ Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibra
 
 | ID | Simple Name | Operating Impact | Capital Authorized | Conf | Assumption |
 |----|-------------|-----------------|-------------------|------|-----------|
-| `infrastructure_bond` | Pass Infrastructure Bond Measure | $0–$2M | $300M | medium | $300M GO bond; 55% threshold |
+| `infrastructure_bond` | Pass Infrastructure Bond Measure | **$0** | $300M | medium | $300M GO bond; 55% threshold |
 
-Capital levers **do not directly close the annual operating gap**. Operating benefit is only from avoided emergency repair costs. Bond proceeds are legally restricted to capital expenditures. Bond repaid through voter-approved property tax increase.
+Capital levers: `counts_toward_gap: false`, `counts_now: false`, `impact_min: 0`, `impact_max: 0`.  
+Bond proceeds are legally restricted to capital — **no contribution to operating gap closure**.  
+Bond benefits appear only in the Capital Pressure and Future Pressure panels.
 
 ---
 
 ## 4. Portfolio Presets (13)
 
-| ID | Name | Levers |
-|----|------|--------|
-| `keep_everything` | Keep Everything Running | sales_tax, parcel_tax, fee_increases, vacancy_freeze |
-| `protect_core` | Protect Core Services | targeted_reductions, vacancy_freeze, fee_increases, program_elimination |
-| `efficiency_first` | Efficiency First | vacancy_freeze, outsourcing, compensation_restraint, across_the_board |
-| `structural_reform` | Structural Reform | outsourcing, shift_to_county, service_level_reduction, compensation_restraint |
-| `spend_less` | Spend Less Overall | program_elimination, across_the_board, vacancy_freeze, service_level_reduction |
-| `use_savings` | Use Savings to Get Through | section_115, capital_deferral, fund_balance |
-| `balanced` | Balanced Approach | sales_tax, targeted_reductions, service_level_reduction, vacancy_freeze |
-| `status_quo` | Status Quo (Current Approach) | section_115, restricted_transfer, fund_balance |
-| `structural_balance` | Structural Balance | targeted_reductions, enterprise_fees, sales_tax |
-| `delay_problem` | Delay the Problem | section_115, capital_deferral, fund_balance, skip_pension |
-| `close_the_gap` | Close the Gap | sales_tax, parcel_tax, enterprise_fees, targeted_reductions, real_baseline |
-| `protect_services` | Protect Services | sales_tax, parcel_tax, fee_increases, compensation_restraint, real_baseline |
-| `shift_delivery` | Shift Delivery Model | waste_outsource, marina_concession, health_shift_county, outsourcing |
+| ID | Name | Levers | Effective now (approx) |
+|----|------|--------|------------------------|
+| `keep_everything` | Keep Everything Running | sales_tax, parcel_tax, fee_increases, vacancy_freeze | ~53% |
+| `protect_core` | Protect Core Services | targeted_reductions, vacancy_freeze, fee_increases, program_elimination | ~19% |
+| `efficiency_first` | Efficiency First | vacancy_freeze, outsourcing, compensation_restraint, across_the_board | ~14% |
+| `structural_reform` | Structural Reform | outsourcing, shift_to_county, service_level_reduction, compensation_restraint | ~4% |
+| `spend_less` | Spend Less Overall | program_elimination, across_the_board, vacancy_freeze, service_level_reduction | ~21% |
+| `use_savings` | Use Savings to Get Through | section_115, capital_deferral, fund_balance | ~25% |
+| `balanced` | Balanced Approach | sales_tax, targeted_reductions, service_level_reduction, vacancy_freeze | ~38% |
+| `status_quo` | Status Quo (Current Approach) | section_115, restricted_transfer, fund_balance | ~25% |
+| `structural_balance` | Structural Balance | targeted_reductions, enterprise_fees, sales_tax | ~32% |
+| `delay_problem` | Delay the Problem | section_115, capital_deferral, fund_balance, skip_pension | ~33% |
+| `close_the_gap` | Close the Gap | sales_tax, parcel_tax, targeted_reductions, real_baseline | ~62% (potential 70%) |
+| `protect_services` | Protect Services | sales_tax, parcel_tax, fee_increases, compensation_restraint, real_baseline | ~53% |
+| `shift_delivery` | Shift Delivery Model | waste_outsource, marina_concession, health_shift_county, outsourcing | ~0% now (fully delayed) |
+
+**Note on "Close the Gap":** The preset demonstrates a realistic combination of the two major available revenue increases plus two structural fixes. With the weighted effective-now formula, even this aggressive combination reaches ~62% — reflecting that the spending-side levers operate at medium timing weight and structural changes take time to materialize. Reaching 100%+ requires additional near-term levers or accepting the full potential (~70%) plays out over time.
+
+Portfolio detection is **exact-match**: a preset is highlighted only when `selectedLevers` contains exactly the same IDs as `default_levers`.
 
 Portfolio detection is **exact-match**: a preset is highlighted only when `selectedLevers` contains exactly the same IDs as `default_levers`.
 
@@ -340,7 +383,7 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 ┌─────────────────────────────────────────────────────────────────┐
 │  TOP BAR (sticky)                                               │
 │  Title | General Fund | Annual Budget Gap | Remaining Gap       │
-│                          Progress bar              Simple/Adv ◉ │
+│                    Progress bar         ↓ Export   Simple/Adv ◉ │
 │  Context: "This tool focuses on the yearly budget gap..."       │
 ├────────────────┬───────────────────────┬────────────────────────┤
 │  LEFT          │  CENTER               │  RIGHT                 │
@@ -369,6 +412,10 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 - "General Fund" — $290M
 - "Annual Budget Gap" — $33M
 - "Remaining Gap" — dynamic
+
+**Controls (top-right):**
+- **↓ Export** button — dropdown offering "Download PDF" and "Download PNG"; disabled until ≥1 lever selected. PDF uses jsPDF (lazy-loaded); PNG captures `#impact-panel-capture` via html-to-image (lazy-loaded, 2× pixel ratio).
+- **Simple/Advanced toggle** — switches all lever cards between `name_simple`/`description_simple` and `name_advanced`/`description_advanced` plus extra metadata fields.
 
 **Context line** (persistent, small):
 > "This tool focuses on the yearly budget gap. Long-term obligations like pensions are not included but are affected by some choices."
@@ -472,6 +519,11 @@ Portfolio detection is **exact-match**: a preset is highlighted only when `selec
 - "Still unfunded: $Xm"
 - Note: "Capital spending doesn't close the annual gap — but deferring it makes future budgets harder."
 
+**Scenario Viability block** *(only shown when ≥1 lever active)*:
+- Color-coded overall rating: **Weak** (red) / **Plausible** (yellow) / **Strong** (green)
+- Four checklist rows: Closes gap near-term / Mostly structural fixes / Low uncertainty / No significant overlap
+- Path-to-balance note when gap not closed: "To close the remaining gap, a plan typically requires a major revenue increase, a significant service reduction package, a delivery model shift, or a combination."
+
 **Scenario Summary (`SummaryText`):** auto-generated text, up to 5 lines
 
 ---
@@ -482,15 +534,24 @@ All logic in `src/utils/calculations.js`, called by Zustand on every lever toggl
 
 ### 6.1 Gap Closed
 
+Two gap metrics are computed:
+
 ```
-impact_min_total = Σ impact_min (active levers)
-impact_max_total = Σ impact_max (active levers)
-gap_closed_pct   = (impact_min_total / deficit) × 100
+// Primary: effective near-term impact (weighted by timing)
+now_weight       = { high: 1.0, medium: 0.7, low: 0.4, none: 0.0, hurts: 0.0 }
+effective_impact_now = Σ (impact_min × now_weight) for levers where counts_now == true
+gap_closed_pct   = effective_impact_now / deficit × 100
+
+// Secondary: full potential if all measures play out
+potential_impact = Σ impact_min for levers where counts_toward_gap == true
+potential_gap_pct = potential_impact / deficit × 100
 ```
 
-Conservative: uses `impact_min` for the gap-closed percentage. Capital levers contribute their small operating impact (avoided repair costs) to the gap calculation, but this is made explicit in the UI.
+**Why two metrics:** `gap_closed_pct` reflects what is realistically achievable in the current fiscal year. Delayed levers (outsourcing, compensation restraint, structural reforms) require 1–3 years before savings materialize and are excluded from the primary metric. Capital levers (`counts_toward_gap: false`) are excluded entirely. The secondary metric shows the ceiling if all measures are successfully implemented.
 
-### 6.2 Composition (dollar-weighted, floored at 0)
+The UI displays `gap_closed_pct` as the large percentage in the Gap Status block. `potential_gap_pct` appears below the progress bar when it exceeds the primary metric by more than 5 percentage points.
+
+### 6.2 Composition (dollar-weighted, counts_toward_gap levers only)
 
 ```
 structural_share = (permanent_impact + partial_impact) / positive_total
@@ -512,7 +573,7 @@ pushes_forward = Σ impact_min where later_effect == hurts
 structurally_balanced = temporary_share < 0.2 AND gap_closed_pct >= 100
 ```
 
-A plan is structurally balanced when it fully closes the gap **and** does so without heavy reliance on temporary measures (< 20% of impact from temporary levers).
+A plan is structurally balanced when it fully closes the gap on the effective-now basis **and** does so without heavy reliance on temporary measures (< 20% of impact from temporary levers).
 
 ### 6.5 Future Pressure
 
@@ -524,7 +585,33 @@ else if (temporary_share > 0.2 OR delayed_share > 0.3) → "medium"
 else → "low"
 ```
 
-### 6.6 Warnings
+### 6.6 Overlap Detection
+
+```
+poolCounts = count of active levers per shares_budget_pool value
+
+overlap triggers when:
+  - "discretionary_spending" pool: ≥ 3 active levers
+  - "reserves" pool: ≥ 2 active levers
+  - any other pool: ≥ 2 active levers
+```
+
+### 6.7 Scenario Viability
+
+```
+closes_gap_now        = gap_closed_pct >= 100
+mostly_structural     = structural_share >= 0.6
+high_uncertainty      = low_confidence_share > 0.4
+overlapping_levers    = has_overlap (from §6.6)
+relies_on_enterprise  = any active lever has enterprise_effect_type == "margin_transfer"
+
+overall:
+  "strong"    if closes_gap_now AND mostly_structural AND NOT high_uncertainty AND NOT has_overlap
+  "plausible" if gap_closed_pct >= 80 AND structural_share >= 0.4 AND NOT has_overlap
+  "weak"      otherwise
+```
+
+### 6.8 Warnings
 
 | Key | Trigger | Message |
 |-----|---------|---------|
@@ -533,10 +620,13 @@ else → "low"
 | `future_pressure` | `future_pressure == "high"` | "This will make future budgets harder to balance." |
 | `low_confidence` | low-confidence levers > 40% of active count | "Some estimates are uncertain — actual savings may vary significantly." |
 | `too_delayed` | `delayed_share > 0.3` | "Much of this plan's savings won't materialize for 1–3 years." |
+| `overlap` | `has_overlap == true` | "These selections draw from overlapping spending areas. Combined savings may be overstated." |
+| `attrition_risk` | ≥2 active levers with `attrition_risk: "high"` AND `service_domain: "public_safety"` | "This plan increases risk of additional staffing losses, which could reduce actual savings." |
+| `safety_threshold` | ≥2 active levers with `service_domain: "public_safety"` AND `nonlinear_effect: true` | "Public safety staffing may fall below operational thresholds, leading to disproportionate service degradation." |
 
 `not_structural` takes display precedence over `too_temporary` and `future_pressure` warnings.
 
-### 6.7 Dominant Type (summary text)
+### 6.9 Dominant Type (summary text)
 
 ```
 structural_share > 0.6  → "permanent"
@@ -656,12 +746,19 @@ Displayed in TopBar:
 - Nonlinear effect warnings on vacancy freeze and service level reduction
 - Reduction capacity per spending category (advanced mode in SpendingPanel)
 - Capital Pressure panel ($1.65B backlog, bond measure progress)
+- Export scenario as PDF (jsPDF) or PNG (html-to-image) — accessible from TopBar
+- Weighted effective-now gap formula (`counts_now` + `now_weight` per lever)
+- Enterprise fund pathway modeling (`enterprise_effect_type`, `gf_pathway`)
+- Overlap detection and warning (`shares_budget_pool`)
+- Attrition risk and public safety threshold warnings (`attrition_risk`, `service_domain`)
+- Scenario Viability panel (weak / plausible / strong + checklist)
+- Path-to-balance guidance when gap not closed
 - GitHub Pages deployment via Actions
 
 ### Potential Next Steps
 - Shareable scenario URLs (encode selected levers in URL hash)
-- Export scenario as PDF or image
 - Add data source citations per lever (CAFR, budget documents)
+- Public safety staffing attenuation factor in gap calculation (currently only warns, does not attenuate)
 - City-specific configuration (swap data layer for other municipalities)
 
 ---

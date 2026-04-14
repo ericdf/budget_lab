@@ -106,6 +106,15 @@ export default function SummaryText() {
           {warnings.includes('too_delayed') && (
             <Warning variant="blue">Much of this plan's savings won't materialize for 1–3 years.</Warning>
           )}
+          {warnings.includes('overlap') && (
+            <Warning variant="yellow">These selections draw from overlapping spending areas. Combined savings may be overstated.</Warning>
+          )}
+          {warnings.includes('attrition_risk') && (
+            <Warning variant="orange">This plan increases risk of additional staffing losses, which could reduce actual savings.</Warning>
+          )}
+          {warnings.includes('safety_threshold') && (
+            <Warning>Public safety staffing may fall below operational thresholds, leading to disproportionate service degradation.</Warning>
+          )}
         </div>
       )}
     </div>

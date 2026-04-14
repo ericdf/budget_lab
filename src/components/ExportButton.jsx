@@ -21,12 +21,14 @@ export default function ExportButton() {
   const { scenario, selectedLevers, protectedCategories } = useStore()
   const {
     gap_closed_pct,
+    effective_impact_now,
     impact_min_total,
     impact_max_total,
     structurally_balanced,
     future_pressure,
     warnings,
     categoryImpact,
+    scenario_viability,
   } = scenario
 
   const activeLevers = levers.filter((l) => selectedLevers.includes(l.id))
@@ -75,8 +77,8 @@ export default function ExportButton() {
       doc.setFontSize(10)
       const pct = Math.round(gap_closed_pct)
       const gapLine = gap_closed_pct >= 100
-        ? `Fully closed  (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} in estimated savings)`
-        : `${pct}% closed  (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} of ${formatMoney(budget.deficit)} gap)`
+        ? `Fully closed near-term  (${formatMoney(effective_impact_now ?? impact_min_total)} effective now)`
+        : `${pct}% effective near-term  (${formatMoney(effective_impact_now ?? impact_min_total)} of ${formatMoney(budget.deficit)} gap)`
       doc.text(gapLine, margin + 12, y)
       y += LINE * 2
 

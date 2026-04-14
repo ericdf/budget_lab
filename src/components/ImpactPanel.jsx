@@ -7,11 +7,19 @@ import SummaryText from './SummaryText'
 const INFRA_BACKLOG = budget.infrastructure_backlog ?? 1650000000
 const BOND_AMOUNT = 300000000
 
+const VIABILITY_STYLES = {
+  weak:     { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-800',    label: 'Weak' },
+  plausible:{ bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', label: 'Plausible' },
+  strong:   { bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-800',  label: 'Strong' },
+}
+
 export default function ImpactPanel() {
   const { scenario, protectedCategories, toggleProtect, selectedLevers } = useStore()
   const {
     gap_closed_pct,
+    potential_gap_pct,
     impact_min_total,
+    effective_impact_now,
     structural_share,
     temporary_share,
     delayed_share,
@@ -22,11 +30,13 @@ export default function ImpactPanel() {
     structurally_balanced,
     categoryImpact,
     activeCount,
+    scenario_viability,
   } = scenario
 
-  const remaining = Math.max(0, budget.deficit - impact_min_total)
+  const remaining = Math.max(0, budget.deficit - effective_impact_now)
   const pct = Math.min(100, Math.max(0, gap_closed_pct))
   const overClosed = gap_closed_pct >= 100
+  const potentialPct = Math.min(100, Math.max(0, potential_gap_pct ?? gap_closed_pct))
 
   const barMax = budget.deficit
   const nowW  = Math.min(100, (helps_now / barMax) * 100)
@@ -51,7 +61,7 @@ export default function ImpactPanel() {
             <p className={`text-3xl font-bold ${overClosed ? 'text-green-600' : 'text-berkeley-blue'}`}>
               {overClosed ? '100%+' : `${Math.round(pct)}%`}
             </p>
-            <p className="text-xs text-gray-500">of annual gap closed</p>
+            <p className="text-xs text-gray-500">effective near-term impact</p>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
             <div
@@ -61,10 +71,16 @@ export default function ImpactPanel() {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
-            <span>{formatMoney(impact_min_total)} saved</span>
+          <div className="flex justify-between text-xs text-gray-400 mb-2">
+            <span>{formatMoney(effective_impact_now)} effective now</span>
             <span>{formatMoney(remaining)} gap left</span>
           </div>
+          {potentialPct > pct + 5 && (
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+              <span className="text-xs text-gray-400">Full potential (if all plays out)</span>
+              <span className="text-xs font-medium text-gray-500">{Math.round(potentialPct)}%</span>
+            </div>
+          )}
         </div>
 
         {/* Structural Balance */}
@@ -100,6 +116,34 @@ export default function ImpactPanel() {
             </div>
           )}
         </div>
+
+        {/* Scenario Viability */}
+        {activeCount > 0 && scenario_viability && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+              Scenario Viability
+            </h2>
+            {(() => {
+              const s = VIABILITY_STYLES[scenario_viability.overall] ?? VIABILITY_STYLES.weak
+              return (
+                <div className={`rounded-lg px-3 py-2.5 border ${s.bg} ${s.border} mb-3`}>
+                  <p className={`text-xs font-bold uppercase tracking-wide ${s.text}`}>{s.label}</p>
+                </div>
+              )
+            })()}
+            <div className="space-y-1.5">
+              <ViabilityRow label="Closes gap near-term" ok={scenario_viability.closes_gap_now} />
+              <ViabilityRow label="Mostly structural fixes" ok={scenario_viability.mostly_structural} />
+              <ViabilityRow label="Low uncertainty" ok={!scenario_viability.high_uncertainty} />
+              <ViabilityRow label="No significant overlap" ok={!scenario_viability.overlapping_levers} />
+            </div>
+            {!scenario_viability.closes_gap_now && activeCount > 0 && (
+              <p className="text-xs text-gray-500 mt-3 pt-2 border-t border-gray-100 leading-snug">
+                To close the remaining gap, a plan typically requires a major revenue increase, a significant service reduction package, a delivery model shift, or a combination.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Values Alignment */}
         {protectedCategories.length > 0 && (
@@ -278,6 +322,17 @@ function CompositionRow({ label, pct, color }) {
       <span className={`inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0 ${color}`} />
       <span className="text-xs text-gray-600 flex-1">{label}</span>
       <span className="text-xs font-semibold text-gray-700 tabular-nums">{Math.round(pct * 100)}%</span>
+    </div>
+  )
+}
+
+function ViabilityRow({ label, ok }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-gray-600">{label}</span>
+      <span className={`text-xs font-semibold ${ok ? 'text-green-600' : 'text-red-500'}`}>
+        {ok ? '✔' : '✖'}
+      </span>
     </div>
   )
 }
