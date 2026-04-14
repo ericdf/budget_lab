@@ -24,6 +24,7 @@ export default function App() {
       <footer className="text-center text-xs text-gray-400 py-4 border-t border-gray-200 px-4">
         Berkeley Budget Lab · Dollar amounts are illustrative estimates based on publicly available budget data.
         This tool is a decision aid, not an official budget projection.
+        <span className="block font-mono text-gray-300 mt-1">{__COMMIT__}</span>
       </footer>
     </div>
   )
