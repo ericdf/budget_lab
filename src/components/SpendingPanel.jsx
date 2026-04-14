@@ -53,6 +53,8 @@ export default function SpendingPanel() {
             const isProtected = protectedCategories.includes(cat.id)
             const hasConflict = isProtected && impactCount > 0
 
+            const isStressed = cat.id === 'public_safety'
+
             return (
               <div key={cat.id} className={`group relative rounded-md px-1.5 py-0.5 -mx-1.5 ${isProtected ? 'bg-blue-50/60' : ''}`}>
                 <div className="flex items-center justify-between mb-0.5">
@@ -68,6 +70,11 @@ export default function SpendingPanel() {
                       className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
                     />
                     <span className={`text-xs font-medium leading-tight ${isProtected ? 'text-blue-800' : 'text-gray-700'}`}>{cat.name}</span>
+                    {isStressed && (
+                      <span className="text-xs text-orange-600 font-medium" title="BPD staffing is at historic lows (~137 of 181 authorized positions filled). Budget cuts here may not yield proportional savings — vacancies are typically covered by overtime.">
+                        ⚠ stressed
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     {hasConflict && (
@@ -111,10 +118,15 @@ export default function SpendingPanel() {
                   </div>
                 )}
                 {/* Tooltip */}
-                <div className="absolute left-0 top-full mt-1 z-20 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-xl pointer-events-none">
+                <div className="absolute left-0 top-full mt-1 z-20 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-56 shadow-xl pointer-events-none">
                   <p className="font-semibold mb-0.5">{cat.name}</p>
                   <p className="text-white/80">{formatMoney(cat.amount)}</p>
                   <p className="text-white/60 mt-1 leading-snug">{cat.description}</p>
+                  {isStressed && (
+                    <p className="text-orange-300 mt-1.5 leading-snug">
+                      ⚠ Staffing stressed: ~137 of 181 authorized BPD positions filled. Cuts may not yield proportional savings — vacancies are typically backfilled with overtime.
+                    </p>
+                  )}
                   {cat.reduction_capacity && (
                     <p className="text-white/50 mt-1">Cut capacity: {Math.round(cat.reduction_capacity.low * 100)}%–{Math.round(cat.reduction_capacity.high * 100)}%</p>
                   )}

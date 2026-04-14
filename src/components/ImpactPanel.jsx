@@ -52,6 +52,26 @@ export default function ImpactPanel() {
   return (
     <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
       <div id="impact-panel-capture" className="space-y-3 sticky top-[108px]">
+        {/* Without Action — shown only when no levers active */}
+        {activeCount === 0 && (
+          <div className="bg-red-50 rounded-xl border border-red-200 shadow-sm p-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-2">
+              Without Action
+            </h2>
+            <p className="text-xs text-red-800 leading-snug mb-2">
+              If no revenue measure passes and no cuts are made, the <span className="font-semibold">$33M structural deficit persists and compounds</span> each year.
+            </p>
+            <p className="text-xs text-red-700 leading-snug mb-2">
+              The most likely outcome: emergency cuts concentrated in the largest cost centers — primarily <span className="font-semibold">Public Safety</span> and <span className="font-semibold">Public Works</span>, which together account for nearly half the General Fund.
+            </p>
+            <ul className="text-xs text-red-700 space-y-1">
+              <li className="flex items-start gap-1.5"><span className="mt-0.5">·</span><span>Layoffs or position eliminations in police and fire</span></li>
+              <li className="flex items-start gap-1.5"><span className="mt-0.5">·</span><span>Service reductions visible to residents</span></li>
+              <li className="flex items-start gap-1.5"><span className="mt-0.5">·</span><span>Deferred infrastructure worsening the long-term backlog</span></li>
+            </ul>
+          </div>
+        )}
+
         {/* Gap meter */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">

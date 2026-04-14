@@ -17,16 +17,41 @@ export default function LeversPanel() {
   return (
     <main className="flex-1 min-w-0 overflow-y-auto">
       <div className="p-4 max-w-2xl mx-auto">
+
+        {/* Current Decision context — persistent, not collapsible */}
+        <div className="mb-4 rounded-lg border border-berkeley-blue/20 bg-berkeley-blue/5 px-4 py-3">
+          <p className="text-xs font-semibold text-berkeley-blue uppercase tracking-widest mb-1.5">
+            What's Being Decided Now
+          </p>
+          <p className="text-xs text-gray-700 leading-snug mb-2">
+            Berkeley faces a <span className="font-semibold">$33M annual structural deficit</span>.
+            The council is currently considering:
+          </p>
+          <ul className="text-xs text-gray-700 space-y-1 mb-2">
+            <li className="flex items-start gap-1.5">
+              <span className="text-berkeley-blue mt-0.5">→</span>
+              <span>A <span className="font-semibold">0.5% sales tax increase</span> (~$9M/year, requires voter approval)</span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <span className="text-berkeley-blue mt-0.5">→</span>
+              <span>A <span className="font-semibold">$300M infrastructure bond</span> (capital only — does not close the operating gap)</span>
+            </li>
+          </ul>
+          <p className="text-xs text-gray-500 leading-snug">
+            The alternative if no revenue measure passes: roughly <span className="font-semibold text-red-700">10–12% cuts across all departments</span>, including potential layoffs in public safety.
+          </p>
+        </div>
+
         <PortfolioSelector />
 
-        {/* Static explainer: how is the budget currently balanced */}
+        {/* How is the budget currently balanced */}
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
           <button
             className="w-full flex items-center justify-between px-4 py-2.5 text-left"
             onClick={() => setExplainerOpen((o) => !o)}
           >
             <span className="text-xs font-semibold text-amber-800">
-              How is Berkeley's budget currently balanced?
+              How is Berkeley currently bridging the gap?
             </span>
             <span className="text-amber-600 text-xs">{explainerOpen ? '▲' : '▼'}</span>
           </button>

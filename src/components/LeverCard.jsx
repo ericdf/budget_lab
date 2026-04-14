@@ -94,6 +94,15 @@ export default function LeverCard({ lever }) {
           {advancedMode ? lever.description_advanced : lever.description_simple}
         </p>
 
+        {/* Simple-mode GF pathway note for enterprise levers */}
+        {!advancedMode && lever.enterprise_effect_type && lever.enterprise_effect_type !== 'none' && (
+          <p className="text-xs text-blue-600 mt-1 leading-snug">
+            {lever.enterprise_effect_type === 'subsidy_reduction'
+              ? 'General Fund saves by reducing its subsidy to this service.'
+              : 'Enterprise savings only reach the General Fund if surplus is explicitly transferred — not automatic.'}
+          </p>
+        )}
+
         {/* Signal badges */}
         <div className="flex flex-wrap gap-1 mt-2">
           <span className={`badge ${now.cls}`}>{now.label}</span>
