@@ -4,8 +4,11 @@ import budget from '../data/budget.json'
 import { formatMoney, CATEGORY_LABELS } from '../utils/calculations'
 import SummaryText from './SummaryText'
 
+const INFRA_BACKLOG = budget.infrastructure_backlog ?? 1650000000
+const BOND_AMOUNT = 300000000
+
 export default function ImpactPanel() {
-  const { scenario, protectedCategories, toggleProtect } = useStore()
+  const { scenario, protectedCategories, toggleProtect, selectedLevers } = useStore()
   const {
     gap_closed_pct,
     impact_min_total,
@@ -209,6 +212,43 @@ export default function ImpactPanel() {
             </div>
           </div>
         )}
+
+        {/* Capital Pressure */}
+        <div className="bg-white rounded-xl border border-teal-200 shadow-sm p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-teal-600 mb-3">
+            Capital Pressure
+          </h2>
+          {(() => {
+            const bondActive = selectedLevers.includes('infrastructure_bond')
+            const bondAmount = bondActive ? BOND_AMOUNT : 0
+            const remaining = INFRA_BACKLOG - bondAmount
+            const pctAddressed = bondActive ? Math.round((BOND_AMOUNT / INFRA_BACKLOG) * 100) : 0
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Infrastructure backlog</span>
+                  <span className="text-xs font-bold text-red-600">{formatMoney(INFRA_BACKLOG)}</span>
+                </div>
+                {bondActive && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-teal-700">Bond measure</span>
+                    <span className="text-xs font-bold text-teal-700">−{formatMoney(BOND_AMOUNT)}</span>
+                  </div>
+                )}
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${pctAddressed}%` }} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Still unfunded</span>
+                  <span className={`text-xs font-bold ${remaining > 0 ? 'text-gray-700' : 'text-green-600'}`}>{formatMoney(remaining)}</span>
+                </div>
+                <p className="text-xs text-gray-400 leading-snug pt-1 border-t border-gray-100">
+                  Capital spending doesn't close the annual gap — but deferring it makes future budgets harder.
+                </p>
+              </div>
+            )
+          })()}
+        </div>
 
         {/* Summary text */}
         <SummaryText />

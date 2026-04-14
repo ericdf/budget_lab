@@ -1,54 +1,63 @@
 {
   "total_budget": 290000000,
   "deficit": 33000000,
+  "infrastructure_backlog": 1650000000,
   "categories": [
     {
       "id": "public_safety",
       "name": "Public Safety",
       "amount": 104000000,
-      "description": "Police, fire, and emergency services — the largest share of the general fund"
+      "description": "Police, fire, and emergency services — the largest share of the general fund",
+      "reduction_capacity": { "low": 0.03, "medium": 0.05, "high": 0.10 }
     },
     {
       "id": "pensions_debt",
       "name": "Pensions & Debt",
       "amount": 40000000,
-      "description": "CalPERS pension contributions and debt service on bonds — mostly fixed obligations"
-    },
-    {
-      "id": "administration",
-      "name": "Administration",
-      "amount": 33000000,
-      "description": "City management, finance, HR, IT, and administrative support"
+      "description": "CalPERS pension contributions and debt service on bonds — mostly fixed obligations",
+      "reduction_capacity": { "low": 0, "medium": 0, "high": 0.02 }
     },
     {
       "id": "public_works",
       "name": "Public Works",
       "amount": 35000000,
-      "description": "Streets, sidewalks, infrastructure maintenance, and sanitation"
+      "description": "Streets, sidewalks, infrastructure maintenance, and sanitation",
+      "reduction_capacity": { "low": 0.03, "medium": 0.10, "high": 0.20 }
+    },
+    {
+      "id": "administration",
+      "name": "Administration",
+      "amount": 33000000,
+      "description": "City management, finance, HR, IT, and administrative support",
+      "reduction_capacity": { "low": 0.05, "medium": 0.15, "high": 0.25 }
     },
     {
       "id": "health",
       "name": "Health & Human Services",
       "amount": 27000000,
-      "description": "Public health, mental health, and human services programs"
+      "description": "Public health, mental health, and human services programs",
+      "reduction_capacity": { "low": 0.05, "medium": 0.15, "high": 0.25 }
     },
     {
       "id": "community_services",
       "name": "Community Services",
       "amount": 25000000,
-      "description": "Housing, social services, community programs, and libraries"
+      "description": "Housing, social services, community programs, and libraries",
+      "reduction_capacity": { "low": 0.05, "medium": 0.15, "high": 0.25 }
     },
     {
       "id": "parks_rec",
       "name": "Parks & Recreation",
       "amount": 18000000,
-      "description": "Parks, recreation centers, aquatics, and youth programs"
+      "description": "Parks, recreation centers, aquatics, and youth programs",
+      "reduction_capacity": { "low": 0.05, "medium": 0.15, "high": 0.25 }
     },
     {
       "id": "other",
       "name": "Other",
       "amount": 8000000,
-      "description": "Miscellaneous city services, grants, and special programs"
+      "description": "Miscellaneous city services, grants, and special programs",
+      "reduction_capacity": { "low": 0.10, "medium": 0.20, "high": 0.30 }
     }
   ]
 }

@@ -58,5 +58,23 @@
     "name": "Delay the Problem",
     "description": "Maximum short-term relief, maximum future pain. Every lever here makes next year harder.",
     "default_levers": ["section_115", "capital_deferral", "fund_balance", "skip_pension"]
+  },
+  {
+    "id": "close_the_gap",
+    "name": "Close the Gap",
+    "description": "A mix of revenue and spending changes sized to fully close the structural deficit.",
+    "default_levers": ["sales_tax", "parcel_tax", "enterprise_fees", "targeted_reductions", "real_baseline"]
+  },
+  {
+    "id": "protect_services",
+    "name": "Protect Services",
+    "description": "Preserve programs. Fund the gap with taxes and efficiency — no outsourcing, no elimination.",
+    "default_levers": ["sales_tax", "parcel_tax", "fee_increases", "compensation_restraint", "real_baseline"]
+  },
+  {
+    "id": "shift_delivery",
+    "name": "Shift Delivery Model",
+    "description": "Change how services are provided — contracting, concessions, and county transfers.",
+    "default_levers": ["waste_outsource", "marina_concession", "health_shift_county", "outsourcing"]
   }
 ]

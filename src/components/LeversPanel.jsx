@@ -8,6 +8,7 @@ const GROUPS = [
   { type: 'spending',   label: 'Spending Changes',          color: 'text-red-700',    dot: 'bg-red-400' },
   { type: 'structural', label: 'Structural Changes',        color: 'text-purple-700', dot: 'bg-purple-500' },
   { type: 'temporary',  label: 'Temporary / Timing Tools',  color: 'text-orange-700', dot: 'bg-orange-400' },
+  { type: 'capital',    label: 'Capital & Infrastructure',  color: 'text-teal-700',   dot: 'bg-teal-500' },
 ]
 
 export default function LeversPanel() {

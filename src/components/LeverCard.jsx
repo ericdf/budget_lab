@@ -35,6 +35,13 @@ const TYPE_BORDER = {
   spending:   'border-l-red-400',
   structural: 'border-l-purple-500',
   temporary:  'border-l-orange-400',
+  capital:    'border-l-teal-500',
+}
+
+const PRICING_BASIS_LABEL = {
+  formula:       'Formula-derived',
+  city_estimate: 'City estimate',
+  directional:   'Directional only',
 }
 
 export default function LeverCard({ lever }) {
@@ -113,6 +120,12 @@ export default function LeverCard({ lever }) {
                 </p>
               </div>
             )}
+            {lever.capital_authorization && (
+              <div>
+                <span className="text-gray-400">Capital authorized</span>
+                <p className="font-semibold text-teal-700">{formatMoney(lever.capital_authorization)}</p>
+              </div>
+            )}
             <div>
               <span className="text-gray-400">Confidence</span>
               <p className={`font-semibold ${conf.cls}`}>{conf.label}</p>
@@ -121,12 +134,52 @@ export default function LeverCard({ lever }) {
               <span className="text-gray-400">Timing</span>
               <p className="font-semibold text-gray-700 capitalize">{lever.implementation}</p>
             </div>
+            {lever.policy_assumption && (
+              <div className="col-span-2">
+                <span className="text-gray-400">Assumption</span>
+                <p className="text-gray-600 leading-snug mt-0.5">{lever.policy_assumption}</p>
+              </div>
+            )}
+            {lever.pricing_basis && (
+              <div>
+                <span className="text-gray-400">Estimate basis</span>
+                <p className="font-semibold text-gray-700">{PRICING_BASIS_LABEL[lever.pricing_basis] ?? lever.pricing_basis}</p>
+              </div>
+            )}
+            {lever.delivery_model && (
+              <div>
+                <span className="text-gray-400">Delivery model</span>
+                <p className="font-semibold text-gray-700 capitalize">{lever.delivery_model.replace(/_/g, ' ')}</p>
+              </div>
+            )}
+            {lever.enterprise_revenue_retained != null && (
+              <div className="col-span-2">
+                <span className="text-gray-400">Enterprise savings</span>
+                <p className="text-gray-600 mt-0.5">
+                  {lever.enterprise_revenue_retained
+                    ? 'Savings stay in enterprise fund — General Fund benefit requires explicit transfer'
+                    : 'Savings flow directly to General Fund'}
+                </p>
+              </div>
+            )}
             {lever.mechanism && (
               <div className="col-span-2">
                 <span className="text-gray-400">How it works</span>
                 <p className="text-gray-600 leading-snug mt-0.5">{lever.mechanism}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Nonlinear effect warning */}
+        {lever.nonlinear_effect && (
+          <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-700">
+            <span>⚠</span>
+            <span>
+              {lever.short_term_cost_increase_possible
+                ? 'Vacancies in safety depts are often covered by overtime — actual savings may be lower than projected'
+                : 'Reductions here can trigger offsetting costs or quality effects'}
+            </span>
           </div>
         )}
       </div>

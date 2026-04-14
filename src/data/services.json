@@ -1,0 +1,82 @@
+[
+  {
+    "id": "police",
+    "label": "Police Services",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 80000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "fire",
+    "label": "Fire Services",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 24000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "street_maintenance",
+    "label": "Street Maintenance",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 12000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "solid_waste",
+    "label": "Solid Waste & Recycling",
+    "funding_type": "enterprise",
+    "delivery_model": "city_operated",
+    "general_fund_support": 0,
+    "enterprise_revenue": 61300000
+  },
+  {
+    "id": "marina",
+    "label": "Berkeley Marina",
+    "funding_type": "enterprise",
+    "delivery_model": "city_operated",
+    "general_fund_support": 2000000,
+    "enterprise_revenue": 4000000
+  },
+  {
+    "id": "parking",
+    "label": "Parking Services",
+    "funding_type": "enterprise",
+    "delivery_model": "city_operated",
+    "general_fund_support": 0,
+    "enterprise_revenue": 12000000
+  },
+  {
+    "id": "public_health_dept",
+    "label": "Public Health Department",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 15000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "mental_health",
+    "label": "Mental Health Services",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 8000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "library",
+    "label": "Public Library",
+    "funding_type": "general_fund",
+    "delivery_model": "city_operated",
+    "general_fund_support": 13000000,
+    "enterprise_revenue": 0
+  },
+  {
+    "id": "rec_centers",
+    "label": "Recreation Centers & Aquatics",
+    "funding_type": "mixed",
+    "delivery_model": "city_operated",
+    "general_fund_support": 8000000,
+    "enterprise_revenue": 3000000
+  }
+]

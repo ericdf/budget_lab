@@ -15,7 +15,7 @@ const CATEGORY_COLORS = [
 ]
 
 export default function SpendingPanel() {
-  const { scenario, protectedCategories, toggleProtect } = useStore()
+  const { scenario, protectedCategories, toggleProtect, advancedMode } = useStore()
   const { categoryImpact } = scenario
 
   const sorted = [...budget.categories].sort((a, b) => b.amount - a.amount)
@@ -98,11 +98,26 @@ export default function SpendingPanel() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+                {/* Reduction capacity (advanced mode) */}
+                {advancedMode && cat.reduction_capacity && (
+                  <div className="mt-1 flex gap-2 text-xs text-gray-400">
+                    <span title="Low-impact cut potential">Low: {Math.round(cat.reduction_capacity.low * 100)}%</span>
+                    <span className="text-gray-300">·</span>
+                    <span title="Medium-impact cut potential">Med: {Math.round(cat.reduction_capacity.medium * 100)}%</span>
+                    <span className="text-gray-300">·</span>
+                    <span title="High-impact cut potential">High: {Math.round(cat.reduction_capacity.high * 100)}%</span>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-gray-500">{formatMoney(cat.amount)} budget</span>
+                  </div>
+                )}
                 {/* Tooltip */}
                 <div className="absolute left-0 top-full mt-1 z-20 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-xl pointer-events-none">
                   <p className="font-semibold mb-0.5">{cat.name}</p>
                   <p className="text-white/80">{formatMoney(cat.amount)}</p>
                   <p className="text-white/60 mt-1 leading-snug">{cat.description}</p>
+                  {cat.reduction_capacity && (
+                    <p className="text-white/50 mt-1">Cut capacity: {Math.round(cat.reduction_capacity.low * 100)}%–{Math.round(cat.reduction_capacity.high * 100)}%</p>
+                  )}
                 </div>
               </div>
             )
