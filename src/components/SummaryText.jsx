@@ -17,7 +17,7 @@ const PRESSURE_PHRASES = {
 }
 
 export default function SummaryText() {
-  const { scenario, selectedLevers } = useStore()
+  const { scenario } = useStore()
   const {
     gap_closed_pct,
     impact_min_total,
@@ -25,6 +25,7 @@ export default function SummaryText() {
     dominantType,
     topCategories,
     future_pressure,
+    structurally_balanced,
     warnings,
     activeCount,
   } = scenario
@@ -45,23 +46,32 @@ export default function SummaryText() {
 
   // Line 1: gap closed
   if (gap_closed_pct >= 100) {
-    lines.push(`This scenario closes the full deficit — and then some (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} in estimated savings).`)
+    lines.push(`This scenario closes the full annual gap (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} in estimated savings).`)
   } else {
     lines.push(
-      `This scenario closes roughly ${pctMin}–${pctMax}% of the ${formatMoney(budget.deficit)} deficit (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} in estimated savings).`
+      `This scenario closes roughly ${pctMin}–${pctMax}% of the ${formatMoney(budget.deficit)} annual gap (${formatMoney(impact_min_total)}–${formatMoney(impact_max_total)} in estimated savings).`
     )
   }
 
-  // Line 2: type
+  // Line 2: approach type
   lines.push(`It uses ${TYPE_PHRASES[dominantType] ?? 'a mix of approaches'}.`)
 
-  // Line 3: categories
+  // Line 3: affected categories
   if (catLabels.length > 0) {
     lines.push(`Most directly affects: ${catLabels.join(', ')}.`)
   }
 
-  // Line 4: future
+  // Line 4: future trajectory
   lines.push(`Future budgets will be ${PRESSURE_PHRASES[future_pressure] ?? 'unchanged'} to balance.`)
+
+  // Line 5: structural balance verdict
+  if (gap_closed_pct >= 80) {
+    lines.push(
+      structurally_balanced
+        ? 'This plan structurally balances the budget.'
+        : 'This plan does not structurally balance the budget.'
+    )
+  }
 
   return (
     <div className="space-y-2">
@@ -81,10 +91,13 @@ export default function SummaryText() {
       {/* Warnings */}
       {warnings.length > 0 && (
         <div className="space-y-1.5">
-          {warnings.includes('too_temporary') && (
+          {warnings.includes('not_structural') && (
+            <Warning variant="orange">This plan does not fix the underlying deficit.</Warning>
+          )}
+          {warnings.includes('too_temporary') && !warnings.includes('not_structural') && (
             <Warning>This plan mainly uses savings or delays costs — it doesn't fix the structural problem.</Warning>
           )}
-          {warnings.includes('future_pressure') && !warnings.includes('too_temporary') && (
+          {warnings.includes('future_pressure') && !warnings.includes('too_temporary') && !warnings.includes('not_structural') && (
             <Warning>This will make future budgets harder to balance.</Warning>
           )}
           {warnings.includes('low_confidence') && (

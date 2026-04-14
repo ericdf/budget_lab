@@ -40,5 +40,23 @@
     "name": "Balanced Approach",
     "description": "Small tax increase, targeted cuts, and one structural change. Share the pain.",
     "default_levers": ["sales_tax", "targeted_reductions", "service_level_reduction", "vacancy_freeze"]
+  },
+  {
+    "id": "status_quo",
+    "name": "Status Quo (Current Approach)",
+    "description": "The approach Berkeley currently uses — bridges gaps with one-time funds without fixing the underlying structural problem.",
+    "default_levers": ["section_115", "restricted_transfer", "fund_balance"]
+  },
+  {
+    "id": "structural_balance",
+    "name": "Structural Balance",
+    "description": "Closes the gap with lasting changes to revenues and spending. No temporary measures.",
+    "default_levers": ["targeted_reductions", "enterprise_fees", "sales_tax"]
+  },
+  {
+    "id": "delay_problem",
+    "name": "Delay the Problem",
+    "description": "Maximum short-term relief, maximum future pain. Every lever here makes next year harder.",
+    "default_levers": ["section_115", "capital_deferral", "fund_balance", "skip_pension"]
   }
 ]

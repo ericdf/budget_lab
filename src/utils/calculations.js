@@ -35,9 +35,12 @@ export function calculateScenario(selectedLevers, allLevers, deficit) {
     .filter((l) => l.later_effect === 'hurts')
     .reduce((s, l) => s + Math.max(0, l.impact_min), 0)
 
+  // Structural balance: gap is fully closed AND not heavily reliant on temporary measures
+  const structurally_balanced = temporary_share < 0.2 && gap_closed_pct >= 100
+
   // Future pressure
   const hasMajorDeferral = active.some((l) =>
-    ['section_115', 'skip_pension', 'capital_deferral', 'fund_balance'].includes(l.id)
+    ['section_115', 'skip_pension', 'capital_deferral', 'fund_balance', 'restricted_transfer'].includes(l.id)
   )
   let future_pressure = 'low'
   if (temporary_share > 0.4 || hasMajorDeferral) {
@@ -55,6 +58,8 @@ export function calculateScenario(selectedLevers, allLevers, deficit) {
   if (low_conf_share > 0.4) warnings.push('low_confidence')
   if (delayed_share > 0.3) warnings.push('too_delayed')
   if (future_pressure === 'high') warnings.push('future_pressure')
+  // Fire when the gap appears closed but the plan doesn't structurally fix it
+  if (gap_closed_pct >= 80 && !structurally_balanced) warnings.push('not_structural')
 
   // Affected categories (deduplicated)
   const affectedCategoryIds = [...new Set(active.flatMap((l) => l.affects))]
@@ -92,6 +97,7 @@ export function calculateScenario(selectedLevers, allLevers, deficit) {
     helps_now,
     helps_later,
     pushes_forward,
+    structurally_balanced,
     future_pressure,
     warnings,
     affectedCategoryIds,
@@ -115,7 +121,7 @@ export function formatPct(value, decimals = 0) {
   return `${Math.round(value * 10 ** decimals) / 10 ** decimals}%`
 }
 
-/** Returns a 0–1 severity score for a category based on how many active levers affect it */
+/** Returns a severity label for a category based on how many active levers affect it */
 export function categoryImpactLevel(count) {
   if (count >= 3) return 'high'
   if (count === 2) return 'medium'

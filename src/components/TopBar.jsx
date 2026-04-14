@@ -39,9 +39,7 @@ export default function TopBar() {
             className={`toggle-switch ${advancedMode ? 'bg-berkeley-gold' : 'bg-white/30'} focus:ring-white`}
             aria-label="Toggle advanced mode"
           >
-            <span
-              className={`toggle-thumb ${advancedMode ? 'translate-x-4' : 'translate-x-0'}`}
-            />
+            <span className={`toggle-thumb ${advancedMode ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
           <span className="text-xs text-white/70 hidden sm:block">Advanced</span>
         </div>
@@ -49,8 +47,8 @@ export default function TopBar() {
 
       {/* Stats row */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Stat label="Total Budget" value={formatMoney(budget.total_budget)} />
-        <Stat label="Deficit to Close" value={formatMoney(budget.deficit)} accent="text-red-300" />
+        <Stat label="General Fund" value={formatMoney(budget.total_budget)} />
+        <Stat label="Annual Budget Gap" value={formatMoney(budget.deficit)} accent="text-red-300" />
         <Stat
           label="Remaining Gap"
           value={overClosed ? 'Closed!' : formatMoney(remaining)}
@@ -80,6 +78,14 @@ export default function TopBar() {
         >
           Reset
         </button>
+      </div>
+
+      {/* Context line */}
+      <div className="px-4 pb-2">
+        <p className="text-xs text-white/50 leading-snug">
+          This tool focuses on the yearly budget gap. Long-term obligations like pensions are not
+          included but are affected by some choices.
+        </p>
       </div>
     </header>
   )

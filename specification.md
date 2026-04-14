@@ -14,11 +14,25 @@ A browser-based interactive tool that allows users to explore ways to close a ci
 - Show tradeoffs between choices
 - Distinguish real fixes vs. temporary fixes vs. deferrals
 - Make time effects (now vs. later) explicit
+- Make explicit whether a plan **structurally balances** the budget
 
-**Core question the tool forces the user to answer:**
-> "Am I fixing the problem — or pushing it forward?"
+**Core questions the tool forces the user to answer:**
+> "Am I fixing the problem — or pushing it forward?"  
+> "Does this plan structurally balance the budget?"
 
 This tool is a **structured decision interface**, not a budget simulator. It does not model second-order effects, multi-year compounding, or precise fiscal projections.
+
+### Solution Type Model
+
+There are three types of budget solutions, distinguished throughout the tool:
+
+| Solution Type | Description | Examples |
+|--------------|-------------|---------|
+| **Structural fix** | Changes ongoing balance between recurring revenues and costs | Spending cuts, service level reductions, labor restraint |
+| **Temporary fix** | Uses savings or shifts timing without changing the underlying balance | Drawing reserves, deferring capital, pension fund draw-downs |
+| **External funding** | Brings in new revenue from outside the existing base | Tax increases, fee increases, voter-approved measures |
+
+The key distinction is: **structural fixes** and **external funding** can produce a structurally balanced budget. **Temporary fixes** cannot — they borrow against the future.
 
 ---
 
@@ -43,9 +57,9 @@ src/
 ├── App.jsx                      # Root layout (TopBar + three columns + footer)
 ├── index.css                    # Tailwind directives + global styles
 ├── data/
-│   ├── budget.json              # Total budget, deficit, spending categories
-│   ├── levers.json              # All 16 policy levers with metadata
-│   └── portfolios.json          # 7 preset lever combinations
+│   ├── budget.json              # General Fund total, annual gap, spending categories
+│   ├── levers.json              # All 19 policy levers with metadata
+│   └── portfolios.json          # 10 preset lever combinations
 ├── store/
 │   └── useStore.js              # Zustand store: selectedLevers, advancedMode, scenario
 ├── utils/
@@ -53,11 +67,11 @@ src/
 └── components/
     ├── TopBar.jsx               # Sticky header: budget stats + progress bar + mode toggle
     ├── SpendingPanel.jsx        # Left: spending category bars with impact highlighting
-    ├── LeversPanel.jsx          # Center: grouped lever cards + portfolio selector
+    ├── LeversPanel.jsx          # Center: grouped lever cards + portfolio selector + explainer
     ├── LeverCard.jsx            # Individual lever card with toggle + signal badges
     ├── PortfolioSelector.jsx    # Preset scenario buttons (collapsible)
-    ├── ImpactPanel.jsx          # Right: gap meter, today/tomorrow bars, composition
-    └── SummaryText.jsx          # Auto-generated 4-line scenario summary + warnings
+    ├── ImpactPanel.jsx          # Right: gap meter, structural balance, today/tomorrow, composition
+    └── SummaryText.jsx          # Auto-generated scenario summary + warnings
 ```
 
 ---
@@ -68,31 +82,27 @@ src/
 
 ```json
 {
-  "total_budget": 820000000,
-  "deficit": 124000000,
-  "categories": [
-    {
-      "id": "public_safety",
-      "name": "Public Safety",
-      "amount": 287000000,
-      "description": "string"
-    }
-  ]
+  "total_budget": 290000000,
+  "deficit": 33000000,
+  "categories": [{ "id": "string", "name": "string", "amount": number, "description": "string" }]
 }
 ```
 
-**Berkeley FY2025 approximate actuals.** The 8 categories and their dollar amounts:
+**Basis:** Berkeley General Fund (discretionary operating budget), approximate FY2025.  
+**Deficit:** Structural annual gap of ~$33M (not the $124M all-funds figure).
 
-| ID | Name | Amount | % of Budget |
-|----|------|--------|-------------|
-| `public_safety` | Public Safety | $287M | 35% |
-| `pensions_debt` | Pensions & Debt | $99M | 12% |
-| `administration` | Administration | $82M | 10% |
-| `public_works` | Public Works | $98M | 12% |
-| `health` | Health & Human Services | $74M | 9% |
-| `community_services` | Community Services | $73M | 9% |
-| `parks_rec` | Parks & Recreation | $66M | 8% |
-| `other` | Other | $41M | 5% |
+The 8 spending categories:
+
+| ID | Name | Amount | % of GF |
+|----|------|--------|---------|
+| `public_safety` | Public Safety | $104M | 36% |
+| `pensions_debt` | Pensions & Debt | $40M | 14% |
+| `public_works` | Public Works | $35M | 12% |
+| `administration` | Administration | $33M | 11% |
+| `health` | Health & Human Services | $27M | 9% |
+| `community_services` | Community Services | $25M | 9% |
+| `parks_rec` | Parks & Recreation | $18M | 6% |
+| `other` | Other | $8M | 3% |
 
 ### 2.2 Lever (`src/data/levers.json`)
 
@@ -101,9 +111,10 @@ src/
   "id": "string",
   "name_simple": "string",
   "name_advanced": "string",
-  "impact_min": "number (dollars, may be 0)",
+  "impact_min": "number (dollars)",
   "impact_max": "number (dollars)",
   "type": "revenue | spending | structural | temporary",
+  "solution_type": "fix | temporary | external",
   "now_effect": "high | medium | low | none | hurts",
   "later_effect": "helps | neutral | hurts",
   "fix_type": "permanent | temporary | delayed | partial",
@@ -117,29 +128,43 @@ src/
 ```
 
 **Field notes:**
-- `now_effect: "hurts"` — extends the spec's original enum (`high | medium | low`) to handle levers that worsen the near-term situation (e.g., `let_expire`)
-- `now_effect: "none"` — lever has no current-year fiscal impact (e.g., `compensation_restraint`)
-- `affects` — list of category IDs whose services are impacted; revenue levers that don't cut specific services use `[]`
-- `impact_min/max` — annual fiscal impact in dollars; `0/0` used for discipline levers with no direct dollar value
+
+- `solution_type` — cross-cutting classification for the structural balance model:
+  - `"fix"` → spending and structural levers (directly change ongoing cost/revenue balance)
+  - `"temporary"` → temporary/timing levers (shift costs or use one-time savings)
+  - `"external"` → revenue levers (bring in new money requiring external action or voter approval)
+- `now_effect` extends the base enum to include `"hurts"` (lever worsens near-term situation) and `"none"` (no current-year impact)
+- `affects` lists category IDs whose services are impacted; revenue levers that don't cut specific services use `[]`
+- `impact_min/max` — annual fiscal impact in dollars; `0/0` for discipline levers with no direct dollar value (e.g., `let_expire`)
 - `fix_type: "partial"` — treated as structural for composition purposes but acknowledged as unsustainable alone
+
+**`solution_type` mapping by `type`:**
+
+| `type` | `solution_type` |
+|--------|----------------|
+| revenue | external |
+| spending | fix |
+| structural | fix |
+| temporary | temporary |
 
 ### 2.3 Scenario State (computed by `calculateScenario()`)
 
 ```js
 {
-  impact_min_total: number,      // sum of impact_min for active levers
-  impact_max_total: number,      // sum of impact_max for active levers
-  gap_closed_pct: number,        // (impact_min_total / deficit) * 100
-  structural_share: number,      // 0–1 fraction of positive impact from permanent/partial levers
-  temporary_share: number,       // 0–1 fraction from temporary levers
-  delayed_share: number,         // 0–1 fraction from delayed levers
-  helps_now: number,             // dollar sum: medium/high now_effect AND later_effect != hurts
-  helps_later: number,           // dollar sum: delayed fix_type OR (none now + helps later)
-  pushes_forward: number,        // dollar sum: later_effect == hurts
+  impact_min_total: number,        // Σ impact_min for active levers
+  impact_max_total: number,        // Σ impact_max for active levers
+  gap_closed_pct: number,          // (impact_min_total / deficit) × 100
+  structural_share: number,        // 0–1: permanent+partial impact / positive total
+  temporary_share: number,         // 0–1: temporary impact / positive total
+  delayed_share: number,           // 0–1: delayed impact / positive total
+  helps_now: number,               // $ from levers with medium/high now_effect AND later ≠ hurts
+  helps_later: number,             // $ from delayed levers OR (none now + helps later)
+  pushes_forward: number,          // $ from levers where later_effect == hurts
+  structurally_balanced: boolean,  // temporary_share < 0.2 AND gap_closed_pct >= 100
   future_pressure: "low|medium|high",
-  warnings: string[],            // ["too_temporary", "low_confidence", "too_delayed", "future_pressure"]
+  warnings: string[],
   categoryImpact: { [id]: count }, // number of active levers affecting each category
-  topCategories: string[],       // top 3 affected category IDs by lever count
+  topCategories: string[],         // top 3 most-affected category IDs
   dominantType: "permanent|temporary|delayed|mixed",
   activeCount: number
 }
@@ -148,61 +173,61 @@ src/
 ### 2.4 Portfolio (`src/data/portfolios.json`)
 
 ```json
-{
-  "id": "string",
-  "name": "string",
-  "description": "string",
-  "default_levers": ["lever_id"]
-}
+{ "id": "string", "name": "string", "description": "string", "default_levers": ["lever_id"] }
 ```
 
 ---
 
 ## 3. Lever Catalog
 
-All 16 levers with Berkeley-calibrated impact ranges. Dollar amounts represent **estimated annual fiscal impact** on the general fund.
+All 19 levers. Dollar amounts = **estimated annual fiscal impact** on the General Fund, calibrated to the $33M gap.
 
-### Revenue (4)
+### Revenue — `solution_type: "external"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence | Implementation |
-|----|-------------|-------------|-----|-------|----------|-----------|----------------|
-| `sales_tax` | Raise Sales Tax | $12M–$22M | high | helps | permanent | high | delayed |
-| `parcel_tax` | Add a Parcel Tax | $8M–$18M | high | helps | permanent | medium | delayed |
-| `fee_increases` | Raise City Fees | $4M–$9M | medium | helps | permanent | high | immediate |
-| `let_expire` | Accept Expiring Revenue | $0–$0 | **hurts** | helps | permanent | high | immediate |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
+|----|-------------|-------------|-----|-------|----------|-----------|
+| `sales_tax` | Raise Sales Tax | $9M–$10M | high | helps | permanent | high |
+| `parcel_tax` | Add a Parcel Tax | $4M–$8M | high | helps | permanent | medium |
+| `fee_increases` | Raise City Fees | $2M–$4M | medium | helps | permanent | high |
+| `let_expire` | Accept Expiring Revenue | $0–$0 | **hurts** | helps | permanent | high |
+| `enterprise_fees` | Update Fees to Cover Costs | $2M–$6M | low | helps | permanent | medium |
 
-`let_expire` has zero dollar impact — it is a discipline/accounting choice, not a savings measure. Its value is in removing budget fiction.
+`let_expire` has zero dollar impact — it is a discipline choice that clarifies the true structural gap.
 
-### Spending (4)
+### Spending — `solution_type: "fix"` (4)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence | Implementation |
-|----|-------------|-------------|-----|-------|----------|-----------|----------------|
-| `across_the_board` | Cut All Departments Equally | $12M–$18M | high | helps | permanent | high | immediate |
-| `targeted_reductions` | Cut Lower-Priority Programs | $6M–$14M | medium | helps | permanent | medium | immediate |
-| `vacancy_freeze` | Freeze Hiring | $5M–$9M | medium | helps | **partial** | high | immediate |
-| `program_elimination` | Eliminate Programs | $8M–$16M | medium | helps | permanent | medium | immediate |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
+|----|-------------|-------------|-----|-------|----------|-----------|
+| `across_the_board` | Cut All Departments Equally | $3M–$6M | high | helps | permanent | high |
+| `targeted_reductions` | Cut Lower-Priority Programs | $2M–$5M | medium | helps | permanent | medium |
+| `vacancy_freeze` | Freeze Hiring | $1M–$3M | medium | helps | **partial** | high |
+| `program_elimination` | Eliminate Programs | $3M–$6M | medium | helps | permanent | medium |
 
-### Structural (4)
+### Structural — `solution_type: "fix"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence | Implementation |
-|----|-------------|-------------|-----|-------|----------|-----------|----------------|
-| `outsourcing` | Outsource Some Services | $3M–$9M | low | helps | delayed | **low** | delayed |
-| `shift_to_county` | Shift Programs to County | $2M–$6M | low | helps | delayed | **low** | delayed |
-| `service_level_reduction` | Reduce Service Levels | $7M–$13M | medium | helps | permanent | medium | immediate |
-| `compensation_restraint` | Hold Down Raises | $6M–$14M | **none** | helps | delayed | **low** | delayed |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
+|----|-------------|-------------|-----|-------|----------|-----------|
+| `real_baseline` | Budget Based on Real Costs | $3M–$8M | medium | helps | permanent | medium |
+| `outsourcing` | Outsource Some Services | $1M–$3M | low | helps | delayed | **low** |
+| `shift_to_county` | Shift Programs to County | $1M–$2M | low | helps | delayed | **low** |
+| `service_level_reduction` | Reduce Service Levels | $2M–$4M | medium | helps | permanent | medium |
+| `compensation_restraint` | Hold Down Raises | $2M–$5M | **none** | helps | delayed | **low** |
 
-### Temporary / Timing (4)
+### Temporary / Timing — `solution_type: "temporary"` (5)
 
-| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence | Implementation |
-|----|-------------|-------------|-----|-------|----------|-----------|----------------|
-| `section_115` | Use Pension Reserve Fund | $15M–$25M | high | **hurts** | **temporary** | high | immediate |
-| `skip_pension` | Reduce Pension Contributions | $8M–$12M | medium | **hurts** | **temporary** | medium | immediate |
-| `capital_deferral` | Delay Capital Projects | $10M–$18M | medium | **hurts** | **temporary** | medium | immediate |
-| `fund_balance` | Use Reserves | $12M–$24M | high | **hurts** | **temporary** | high | immediate |
+| ID | Simple Name | Impact Range | Now | Later | Fix Type | Confidence |
+|----|-------------|-------------|-----|-------|----------|-----------|
+| `section_115` | Use Pension Reserve Fund | $3M–$6M | high | **hurts** | **temporary** | high |
+| `skip_pension` | Reduce Pension Contributions | $1M–$3M | medium | **hurts** | **temporary** | medium |
+| `capital_deferral` | Delay Capital Projects | $2M–$5M | medium | **hurts** | **temporary** | medium |
+| `fund_balance` | Use Reserves | $3M–$6M | high | **hurts** | **temporary** | high |
+| `restricted_transfer` | Use Funds Set Aside for Other Purposes | $3M–$5M | medium | **hurts** | **temporary** | high |
+
+`restricted_transfer` represents diverting restricted or special-purpose fund balances (e.g., workers' comp reserves) — a documented practice in Berkeley's recent budgets.
 
 ---
 
-## 4. Portfolio Presets
+## 4. Portfolio Presets (10)
 
 | ID | Name | Levers |
 |----|------|--------|
@@ -213,8 +238,11 @@ All 16 levers with Berkeley-calibrated impact ranges. Dollar amounts represent *
 | `spend_less` | Spend Less Overall | program_elimination, across_the_board, vacancy_freeze, service_level_reduction |
 | `use_savings` | Use Savings to Get Through | section_115, capital_deferral, fund_balance |
 | `balanced` | Balanced Approach | sales_tax, targeted_reductions, service_level_reduction, vacancy_freeze |
+| `status_quo` | Status Quo (Current Approach) | section_115, restricted_transfer, fund_balance |
+| `structural_balance` | Structural Balance | targeted_reductions, enterprise_fees, sales_tax |
+| `delay_problem` | Delay the Problem | section_115, capital_deferral, fund_balance, skip_pension |
 
-Portfolio detection is **exact-match**: `PortfolioSelector` highlights the active preset only when `selectedLevers` contains exactly the same IDs as `default_levers` (same count, all present).
+Portfolio detection is **exact-match**: a preset is highlighted only when `selectedLevers` contains exactly the same IDs as `default_levers`.
 
 ---
 
@@ -223,69 +251,66 @@ Portfolio detection is **exact-match**: `PortfolioSelector` highlights the activ
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  TOP BAR (sticky)                                               │
-│  Title | Total Budget | Deficit | Remaining Gap | Progress Bar  │
-│                                              Simple ◉ Advanced  │
+│  Title | General Fund | Annual Budget Gap | Remaining Gap       │
+│                          Progress bar              Simple/Adv ◉ │
+│  Context: "This tool focuses on the yearly budget gap..."       │
 ├────────────────┬───────────────────────┬────────────────────────┤
 │  LEFT          │  CENTER               │  RIGHT                 │
 │  Spending      │  Portfolio Selector   │  Gap Status            │
-│  Overview      │  ─────────────────── │  Today vs Tomorrow     │
-│                │  Revenue levers       │  Plan Composition      │
-│  8 categories  │  Spending levers      │  Service Impact        │
-│  bar chart     │  Structural levers    │  ─────────────────── │
-│  w/ impact     │  Temp/Timing levers   │  Scenario Summary      │
-│  highlighting  │                       │  + Warnings            │
+│  Overview      │  ─────────────────── │  Structural Balance ✔✖ │
+│                │  Current approach     │  Today vs Tomorrow     │
+│  8 categories  │  explainer (collapse) │  Plan Composition      │
+│  bar chart     │  ─────────────────── │  Service Impact        │
+│  w/ impact     │  Revenue levers       │  ─────────────────── │
+│  highlighting  │  Spending levers      │  Scenario Summary      │
+│                │  Structural levers    │  + Warnings            │
+│                │  Temp/Timing levers   │                        │
+│                │  ─────────────────── │                        │
 │                │  Pension note         │                        │
 └────────────────┴───────────────────────┴────────────────────────┘
 │  FOOTER                                                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Responsive:** Left panel stacks above center on mobile (< `lg` breakpoint). Right panel stacks below center. The right panel uses `sticky top-[88px]` to stay visible while the center scrolls.
+**Responsive:** Left panel stacks above center on mobile (< `lg` breakpoint). Right panel stacks below. Right panel uses `sticky top-[108px]` (accounts for taller TopBar with context line).
 
 ### 5.1 TopBar
 
-- Sticky, Berkeley Blue background
-- Title row: "Berkeley Budget Lab" + Simple/Advanced toggle (right)
-- Stats row: Total Budget | Deficit | Remaining Gap | progress bar | Reset link
-- Progress bar color: red (0–33%) → yellow (33–66%) → green (66–100%+)
+**Field labels:**
+- "General Fund" (was "Total Budget") — $290M
+- "Annual Budget Gap" (was "Deficit to Close") — $33M
+- "Remaining Gap" — dynamic
+
+**Context line** (persistent, small, below stats row):
+> "This tool focuses on the yearly budget gap. Long-term obligations like pensions are not included but are affected by some choices."
 
 ### 5.2 SpendingPanel (Left)
 
 - Stacked multi-color bar at top showing budget proportions
 - 8 category rows: dot + name + optional impact badge + % + horizontal bar
-- Impact badge appears when 1+ active levers `affects` that category: `low` (gray) / `medium` (yellow) / `high` (orange)
-- Hover tooltip shows category description and dollar amount
-- Impact severity: 1 lever = low, 2 = medium, 3+ = high
+- Impact badge: 1 lever = low (gray), 2 = medium (yellow), 3+ = high (orange)
+- Hover tooltip shows description and dollar amount
 
 ### 5.3 LeversPanel (Center)
 
-- `PortfolioSelector` at top (collapsible via "Show/Hide presets" toggle)
-- Four grouped sections, each with colored dot + label:
-  - Revenue (blue)
-  - Spending Changes (red)
-  - Structural Changes (purple)
-  - Temporary / Timing Tools (orange)
-- Required global sentence (amber box, bottom of panel): *"Most pension costs come from past promises and don't go away quickly."*
+- `PortfolioSelector` at top (collapsible)
+- **"How is Berkeley's budget currently balanced?" explainer** (collapsible amber box):
+  - Using savings (reserves and pension stabilization funds)
+  - Moving money between funds (e.g., workers' comp reserves)
+  - Delaying costs (deferred maintenance, reduced pension payments)
+  - Footer: "These help now but do not fix the underlying gap."
+- Four grouped lever sections (Revenue / Spending Changes / Structural Changes / Temporary & Timing)
+- Required global sentence (amber box, bottom): *"Most pension costs come from past promises and don't go away quickly."*
 
 ### 5.4 LeverCard
 
-**Simple mode shows:**
-- `name_simple` (bold)
-- `description_simple` (small gray)
-- Signal badges: Now | Later | Fix type
-- Toggle switch (right)
+**Simple mode:** `name_simple` + `description_simple` + signal badges + toggle
 
-**Advanced mode adds:**
-- `name_advanced` replaces `name_simple`
-- `description_advanced` replaces `description_simple`
-- Second section (below divider): Impact range | Confidence | Timing | Mechanism
+**Advanced mode adds:** `name_advanced`, `description_advanced`, impact range, confidence, timing, mechanism
 
-**Card styling:**
-- 4px left border color indicates lever `type`: blue (revenue), red (spending), purple (structural), orange (temporary)
-- Selected state: `border-berkeley-blue` + subtle ring
-- Entire card is clickable (role="checkbox")
+**Card left border color by `type`:** blue (revenue), red (spending), purple (structural), orange (temporary)
 
-**Signal badge colors:**
+**Signal badge color table:**
 
 | Signal | Value | Color |
 |--------|-------|-------|
@@ -304,52 +329,38 @@ Portfolio detection is **exact-match**: `PortfolioSelector` highlights the activ
 
 ### 5.5 ImpactPanel (Right)
 
-**Gap Status block:**
-- Large % number (gap closed, clamped to 100%+)
-- Progress bar (same color logic as TopBar)
-- "$Xm saved / $Ym gap left" labels
+**Gap Status block:** large %, progress bar, "$Xm saved / $Ym gap left"
 
-**Today vs Tomorrow bars:**
-Three horizontal bars, each scaled against the full deficit:
-- Green — "Helps now": levers with `now_effect` medium/high AND `later_effect` ≠ hurts
-- Blue — "Helps later": levers with `fix_type` delayed OR (`now_effect` none AND `later_effect` helps)
-- Orange — "Pushes cost forward": levers with `later_effect` hurts
+**Structural Balance block** *(new)*:
+- ✔ green: "Balanced — Recurring revenues ≥ recurring costs"
+- ✖ red: "Not balanced — [Gap is not fully closed | Relies on temporary measures]"
+- Shows "No levers selected" when empty
 
-**Plan Composition block:**
-- Segmented bar: green (permanent) | blue (delayed) | orange (temporary)
-- Row breakdown with percentages
-- Future Budget Pressure label: low (green) / medium (yellow) / high (red)
+**Today vs Tomorrow bars:** green (helps now) / blue (helps later) / orange (pushes cost forward) — each scaled against the full deficit
 
-**Service Impact block** (only shown when categories are affected):
-- Lists affected categories with count-based severity badges
-- High (red): 3+ levers; Medium (yellow): 2 levers; Low (gray): 1 lever
+**Plan Composition block:** segmented bar + % rows for permanent/delayed/temporary + future pressure label
 
-**Scenario Summary (`SummaryText`):**
-Auto-generated 4-line text:
-1. Gap closed % range + dollar range
-2. Dominant approach type
-3. Top affected categories
-4. Future budget trajectory
+**Service Impact block:** affected categories with severity badges (only shown when categories are affected)
+
+**Scenario Summary (`SummaryText`):** auto-generated text, up to 5 lines
 
 ---
 
 ## 6. Calculation Logic
 
-All calculations live in `src/utils/calculations.js` and are called by the Zustand store on every lever toggle.
+All logic in `src/utils/calculations.js`, called by Zustand on every lever toggle.
 
 ### 6.1 Gap Closed
 
 ```
-impact_min_total = Σ impact_min for all active levers
-impact_max_total = Σ impact_max for all active levers
+impact_min_total = Σ impact_min (active levers)
+impact_max_total = Σ impact_max (active levers)
 gap_closed_pct   = (impact_min_total / deficit) × 100
 ```
 
-Conservative display: uses `impact_min` for the gap-closed percentage.
+Conservative: uses `impact_min` for the gap-closed percentage.
 
-### 6.2 Composition
-
-Shares are computed from dollar-weighted `impact_min` (floored at 0):
+### 6.2 Composition (dollar-weighted, floored at 0)
 
 ```
 structural_share = (permanent_impact + partial_impact) / positive_total
@@ -360,31 +371,42 @@ delayed_share    = delayed_impact / positive_total
 ### 6.3 Today vs Tomorrow Buckets
 
 ```
-helps_now     = Σ impact_min where now_effect ∈ {high, medium} AND later_effect ≠ hurts
-helps_later   = Σ impact_min where fix_type == delayed OR (now_effect == none AND later_effect == helps)
+helps_now      = Σ impact_min where now_effect ∈ {high, medium} AND later_effect ≠ hurts
+helps_later    = Σ impact_min where fix_type == delayed OR (now_effect == none AND later_effect == helps)
 pushes_forward = Σ impact_min where later_effect == hurts
 ```
 
-### 6.4 Future Pressure
+### 6.4 Structural Balance
 
 ```
-hasMajorDeferral = any of [section_115, skip_pension, capital_deferral, fund_balance] is active
+structurally_balanced = temporary_share < 0.2 AND gap_closed_pct >= 100
+```
 
-if (temporary_share > 0.4 OR hasMajorDeferral)   → "high"
+A plan is structurally balanced when it fully closes the gap **and** does so without heavy reliance on temporary measures (< 20% of impact from temporary levers).
+
+### 6.5 Future Pressure
+
+```
+hasMajorDeferral = any of [section_115, skip_pension, capital_deferral, fund_balance, restricted_transfer] is active
+
+if (temporary_share > 0.4 OR hasMajorDeferral) → "high"
 else if (temporary_share > 0.2 OR delayed_share > 0.3) → "medium"
-else                                                → "low"
+else → "low"
 ```
 
-### 6.5 Warnings
+### 6.6 Warnings
 
-| Key | Trigger |
-|-----|---------|
-| `too_temporary` | `temporary_share > 0.5` |
-| `low_confidence` | low-confidence levers > 40% of active count |
-| `too_delayed` | `delayed_share > 0.3` |
-| `future_pressure` | `future_pressure == "high"` |
+| Key | Trigger | Message |
+|-----|---------|---------|
+| `not_structural` | `gap_closed_pct >= 80 AND NOT structurally_balanced` | "This plan does not fix the underlying deficit." |
+| `too_temporary` | `temporary_share > 0.5` | "This plan mainly uses savings or delays costs — it doesn't fix the structural problem." |
+| `future_pressure` | `future_pressure == "high"` | "This will make future budgets harder to balance." |
+| `low_confidence` | low-confidence levers > 40% of active count | "Some estimates are uncertain — actual savings may vary significantly." |
+| `too_delayed` | `delayed_share > 0.3` | "Much of this plan's savings won't materialize for 1–3 years." |
 
-### 6.6 Dominant Type (for summary text)
+`not_structural` takes display precedence over `too_temporary` and `future_pressure` warnings.
+
+### 6.7 Dominant Type (summary text)
 
 ```
 structural_share > 0.6  → "permanent"
@@ -395,14 +417,15 @@ else                    → "mixed"
 
 ---
 
-## 7. Warning Messages
+## 7. Summary Text
 
-| Warning | Message shown |
-|---------|--------------|
-| `too_temporary` | "This plan mainly uses savings or delays costs — it doesn't fix the structural problem." |
-| `future_pressure` (not too_temporary) | "This will make future budgets harder to balance." |
-| `low_confidence` | "Some estimates are uncertain — actual savings may vary significantly." |
-| `too_delayed` | "Much of this plan's savings won't materialize for 1–3 years." |
+Auto-generated, up to 5 lines, shown in the right panel:
+
+1. Gap closed % range + dollar range (bold)
+2. Dominant approach type
+3. Top affected categories (if any)
+4. Future budget trajectory
+5. Structural balance verdict (if `gap_closed_pct >= 80`)
 
 ---
 
@@ -412,6 +435,7 @@ else                    → "mixed"
 - "helps now" / "helps later"
 - "temporary" / "permanent"
 - "makes future harder"
+- "structurally balances the budget" / "does not fix the underlying deficit"
 - Dollar ranges and percentages
 
 ### Forbidden in Simple View
@@ -419,8 +443,12 @@ else                    → "mixed"
 - Technical pension accounting terminology
 
 ### Required Global Sentence
-Displayed once, persistently, in the levers panel:
+Displayed persistently in the levers panel:
 > "Most pension costs come from past promises and don't go away quickly."
+
+### Required Context Line
+Displayed in TopBar:
+> "This tool focuses on the yearly budget gap. Long-term obligations like pensions are not included but are affected by some choices."
 
 ---
 
@@ -435,6 +463,8 @@ Displayed once, persistently, in the levers panel:
 | Temporary measure | orange |
 | Long-term benefit | blue |
 | Pushes cost forward | orange bar in Today vs Tomorrow |
+| Structurally balanced | green ✔, green border |
+| Not structurally balanced | red ✖, red border |
 | Future pressure: high | red label |
 | Future pressure: medium | yellow label |
 | Future pressure: low | green label |
@@ -448,21 +478,15 @@ Displayed once, persistently, in the levers panel:
 
 ## 10. State Management
 
-Zustand store (`src/store/useStore.js`) holds:
+Zustand store (`src/store/useStore.js`):
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `selectedLevers` | `string[]` | IDs of active levers |
 | `advancedMode` | `boolean` | Simple vs Advanced card display |
-| `scenario` | `ScenarioState` | Derived, recomputed on every toggle |
+| `scenario` | `ScenarioState` | Derived, recomputed eagerly on every toggle |
 
-Actions:
-- `toggleLever(id)` — add/remove from `selectedLevers`, recompute scenario
-- `toggleAdvancedMode()` — flip `advancedMode`
-- `applyPortfolio(portfolioId)` — replace `selectedLevers` with portfolio's `default_levers`
-- `clearAll()` — reset to empty selection
-
-The scenario is **eagerly computed** (not memoized) on every action. Given the dataset size (16 levers), this is instantaneous and preferred over lazy derivation.
+Actions: `toggleLever(id)`, `toggleAdvancedMode()`, `applyPortfolio(portfolioId)`, `clearAll()`
 
 ---
 
@@ -471,42 +495,38 @@ The scenario is **eagerly computed** (not memoized) on every action. Given the d
 ### GitHub Pages via Actions
 
 `.github/workflows/deploy.yml` triggers on push to `main` or `master`:
+1. `actions/checkout@v4` → `actions/setup-node@v4` (Node 20)
+2. `npm ci` → `npm run build` → outputs to `dist/`
+3. `actions/upload-pages-artifact@v3` → `actions/deploy-pages@v4`
 
-1. `actions/checkout@v4`
-2. `actions/setup-node@v4` (Node 20)
-3. `npm ci`
-4. `npm run build` → outputs to `dist/`
-5. `actions/upload-pages-artifact@v3` (uploads `dist/`)
-6. `actions/deploy-pages@v4` (deploys to Pages environment)
-
-**Required repo settings:** GitHub Pages source must be set to "GitHub Actions" (Settings → Pages → Source).
+**Required:** GitHub Pages source set to "GitHub Actions" (Settings → Pages → Source).
 
 ### Build output
 
 ```
-dist/
-├── index.html          ~0.8 kB gzip
-├── assets/
-│   ├── index-*.css     ~22 kB raw / 4.6 kB gzip
-│   └── index-*.js      ~188 kB raw / 60 kB gzip
+dist/index.html          ~0.8 kB gzip
+dist/assets/index-*.css  ~23 kB raw / 4.7 kB gzip
+dist/assets/index-*.js   ~195 kB raw / 61 kB gzip
 ```
 
-Total transfer: ~65 kB gzip. No external runtime dependencies (fonts from Google Fonts CDN only).
+Total transfer: ~66 kB gzip.
 
 ---
 
 ## 12. Implementation Phases
 
 ### Phase 1 — MVP (complete)
-- Static JSON data (Berkeley-calibrated estimates)
-- 16 levers across 4 groups
-- 7 portfolio presets
+- General Fund baseline ($290M) / structural annual gap ($33M)
+- 19 levers across 4 groups with `solution_type` field
+- 10 portfolio presets including Status Quo, Structural Balance, Delay the Problem
+- Structural balance indicator (✔/✖) in right panel
+- `not_structural` warning in summary text
+- "How is Berkeley's budget currently balanced?" explainer panel
 - Simple + Advanced mode toggle
-- Real-time gap, composition, and warning calculations
 - GitHub Pages deployment via Actions
 
 ### Phase 2 — Data Refinement
-- Update impact ranges from CAFR (Comprehensive Annual Financial Report)
+- Update impact ranges from CAFR and budget documents
 - Refine category mapping to match published budget line items
 - Add data source citations and assumption notes per lever
 - Surface confidence intervals more explicitly in Advanced view
@@ -527,5 +547,9 @@ A user should be able to:
 2. Understand the difference between fixing the problem and delaying it
 3. Identify at least 2 alternative strategies with different tradeoff profiles
 4. Recognize that high short-term savings can come with long-term costs
+5. Understand whether their plan **structurally balances** the budget
 
-The tool succeeds if a non-expert user, after 5 minutes of exploration, can articulate *why* one portfolio is riskier than another.
+The tool succeeds if a non-expert user, after 5 minutes of exploration, can articulate:
+- Why the "Status Quo" preset shows ✖ (not structurally balanced)
+- Why the "Structural Balance" preset shows ✔
+- What the difference is between those two approaches
