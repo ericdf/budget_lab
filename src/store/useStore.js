@@ -1,58 +1,49 @@
 import { create } from 'zustand'
-import levers from '../data/levers.json'
-import portfolios from '../data/portfolios.json'
-import budget from '../data/budget.json'
-import { calculateScenario } from '../utils/calculations'
+import deptData from '../data/departments.json'
 
-const useStore = create((set, get) => ({
-  advancedMode: false,
-  selectedLevers: [],
-  protectedCategories: [],
+const defaultSelections = Object.fromEntries(
+  deptData.departments.map((d) => [d.id, 'B'])
+)
 
-  // Derived scenario (recomputed on every toggle)
-  scenario: calculateScenario([], levers, budget.deficit),
+const defaultStrategyFlags = {
+  outsourcingAllowed: false,
+  countyShiftAllowed: false,
+  adminReductionAllowed: false,
+}
 
-  toggleAdvancedMode() {
-    set((s) => ({ advancedMode: !s.advancedMode }))
+const useStore = create((set) => ({
+  // 'tax' = tax passes (moderate cuts), 'no-tax' = tax fails (deeper cuts)
+  scenario: 'no-tax',
+
+  // department id → 'A' | 'B' | 'C'
+  selections: { ...defaultSelections },
+
+  strategyFlags: { ...defaultStrategyFlags },
+
+  setScenario(scenario) {
+    set({ scenario })
   },
 
-  toggleLever(leverId) {
-    set((s) => {
-      const next = s.selectedLevers.includes(leverId)
-        ? s.selectedLevers.filter((id) => id !== leverId)
-        : [...s.selectedLevers, leverId]
-      return {
-        selectedLevers: next,
-        scenario: calculateScenario(next, levers, budget.deficit),
-      }
-    })
-  },
-
-  applyPortfolio(portfolioId) {
-    const portfolio = portfolios.find((p) => p.id === portfolioId)
-    if (!portfolio) return
-    set(() => {
-      const next = [...portfolio.default_levers]
-      return {
-        selectedLevers: next,
-        scenario: calculateScenario(next, levers, budget.deficit),
-      }
-    })
-  },
-
-  toggleProtect(categoryId) {
+  setDeptState(deptId, state) {
     set((s) => ({
-      protectedCategories: s.protectedCategories.includes(categoryId)
-        ? s.protectedCategories.filter((id) => id !== categoryId)
-        : [...s.protectedCategories, categoryId],
+      selections: { ...s.selections, [deptId]: state },
     }))
   },
 
-  clearAll() {
-    set(() => ({
-      selectedLevers: [],
-      scenario: calculateScenario([], levers, budget.deficit),
+  toggleStrategy(flagKey) {
+    set((s) => ({
+      strategyFlags: {
+        ...s.strategyFlags,
+        [flagKey]: !s.strategyFlags[flagKey],
+      },
     }))
+  },
+
+  resetAll() {
+    set({
+      selections: { ...defaultSelections },
+      strategyFlags: { ...defaultStrategyFlags },
+    })
   },
 }))
 

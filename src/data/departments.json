@@ -1,0 +1,76 @@
+{
+  "departments": [
+    {
+      "id": "public_safety",
+      "name": "Public Safety",
+      "baseBudget": 104000000,
+      "cutNoTaxPct": 7,
+      "cutWithTaxPct": 3,
+      "consequenceBaseline": "Reduced patrol coverage and slower emergency response times; some positions left vacant.",
+      "consequenceSevere": "Major reduction in patrol capacity; potential unit or shift eliminations; measurable decline in emergency response."
+    },
+    {
+      "id": "pensions_debt",
+      "name": "Pensions & Debt Service",
+      "baseBudget": 40000000,
+      "cutNoTaxPct": 0,
+      "cutWithTaxPct": 0,
+      "consequenceBaseline": "No reductions available; these are legally fixed obligations.",
+      "consequenceSevere": "Potential payment deferrals create legal exposure and long-term cost increases."
+    },
+    {
+      "id": "public_works",
+      "name": "Public Works",
+      "baseBudget": 35000000,
+      "cutNoTaxPct": 12,
+      "cutWithTaxPct": 5,
+      "consequenceBaseline": "Deferred street and sidewalk maintenance; reduced sanitation frequency in some areas.",
+      "consequenceSevere": "Significant infrastructure deterioration; potential service eliminations in lower-priority corridors."
+    },
+    {
+      "id": "administration",
+      "name": "Administration",
+      "baseBudget": 33000000,
+      "cutNoTaxPct": 18,
+      "cutWithTaxPct": 10,
+      "consequenceBaseline": "Reduced staffing in HR, IT, finance, and city management support functions.",
+      "consequenceSevere": "Deep cuts to city capacity; slower permitting, procurement delays, reduced oversight."
+    },
+    {
+      "id": "health",
+      "name": "Health & Human Services",
+      "baseBudget": 27000000,
+      "cutNoTaxPct": 12,
+      "cutWithTaxPct": 6,
+      "consequenceBaseline": "Reduced mental health outreach and public health programs; longer wait times.",
+      "consequenceSevere": "Program eliminations; significant loss of services for vulnerable populations."
+    },
+    {
+      "id": "community_services",
+      "name": "Community Services",
+      "baseBudget": 25000000,
+      "cutNoTaxPct": 15,
+      "cutWithTaxPct": 8,
+      "consequenceBaseline": "Reduced library hours and community program availability; fewer funded nonprofits.",
+      "consequenceSevere": "Branch closures; major reductions in housing support and social services delivery."
+    },
+    {
+      "id": "parks_rec",
+      "name": "Parks & Recreation",
+      "baseBudget": 18000000,
+      "cutNoTaxPct": 15,
+      "cutWithTaxPct": 8,
+      "consequenceBaseline": "Reduced park maintenance and recreation center hours; some programs cut.",
+      "consequenceSevere": "Facility closures; elimination of youth programs, aquatics, and after-school activities."
+    },
+    {
+      "id": "other",
+      "name": "Other Programs",
+      "baseBudget": 8000000,
+      "cutNoTaxPct": 20,
+      "cutWithTaxPct": 12,
+      "consequenceBaseline": "Reduced special programs and contracted services.",
+      "consequenceSevere": "Elimination of miscellaneous city programs; loss of grant-matched services."
+    }
+  ]
+}
